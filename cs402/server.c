@@ -111,16 +111,26 @@ int handle_command(char *command, char *response, int len) {
     return 1;
 }
 
+void handle_server_command(char *command) {
+	puts(command);
+return;
+}
+
 void server_run() {
 	// main loop of the server: fetch commands from main terminal,interpret and handle them, return results to main terminal.
 	char *command = 0;
+	char **words = NULL;
 	size_t clen = 0;
 	/* response must be empty for the first call to serve */
 	while ( getline(&command, &clen, stdin)!= -1) {
 		if (command[0] == EOF) {
 			return;
 		}
-	puts(command);
+		words = split_words(command);
+		int i = -1;
+		while (words[++i] != NULL)
+			handle_server_command(words[i]);
+		free_words(words);
 	    //Do something with command
 	}
 	return;
