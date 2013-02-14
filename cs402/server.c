@@ -24,6 +24,13 @@ typedef struct Client {
 	window_t *win;
 } client_t;
 
+typedef enum INPUT_STATE {
+	RUNNING,
+	WAITING_FOR_TERMINATIONS,
+	TERMINATED
+	} INPUT_STATE;
+	
+
 /* Interface with a client: get requests, carry them out and report results */
 void *client_run(void *);
 /* Interface to the db routines.  Pass a command, get a result */
@@ -116,42 +123,65 @@ void handle_server_command(char *command) {
 return;
 }
 
-void server_run() {
+INPUT_STATE handle_input() {
 	// main loop of the server: fetch commands from main terminal,interpret and handle them, return results to main terminal.
 	char *command = 0;
 	char **words = NULL;
 	size_t clen = 0;
 	/* response must be empty for the first call to serve */
-	while ( getline(&command, &clen, stdin)!= -1) {
+	if ( getline(&command, &clen, stdin)!= -1) {
 		if (command[0] == EOF) {
-			return;
+			return TERMINATED;
 		}
 		words = split_words(command);
 		int i = -1;
 		while (words[++i] != NULL)
 			handle_server_command(words[i]);
 		free_words(words);
-	    //Do something with command
 	}
-	return;
+	else 
+		return TERMINATED; //If getline returns control-D
+	return RUNNING; // Else still running
 }
 
 
 int main(int argc, char *argv[]) {
     client_t *c = NULL;	    /* A client to serve */
     int started = 0;	    /* Number of clients started */
+	INPUT_STATE my_state = RUNNING;
 
     if (argc != 1) {
 	fprintf(stderr, "Usage: server\n");
 	exit(1);
     }
 
-	server_run();
-
+	for (;;) {
+		if (0) // If There is a thread to cleanup
+		{
+			//Cleanup
+		}
+		else if (my_state==WAITING_FOR_TERMINATIONS)
+		{
+			if (0) // If all threads are terminated
+				my_state = RUNNING;
+		}
+		else if (my_state==RUNNING)
+		{
+			my_state = handle_input();
+		}
+		else if (my_state==TERMINATED&&started==0) // If there are no running threads
+		{
+			break;
+		}
+	}
+	
+	/*DEPRECATED
     if ((c = client_create(started++)) )  {
 	client_run(c);
 	client_destroy(c);
     }
+	*/
+	
     fprintf(stderr, "Terminating.");
     /* Clean up the window data */
     window_cleanup();
