@@ -111,6 +111,22 @@ int handle_command(char *command, char *response, int len) {
     return 1;
 }
 
+void server_run() {
+	// main loop of the server: fetch commands from main terminal,interpret and handle them, return results to main terminal.
+	char *command = 0;
+	size_t clen = 0;
+	/* response must be empty for the first call to serve */
+	while ( getline(&command, &clen, stdin)!= -1) {
+		if (command[0] == EOF) {
+			return;
+		}
+	puts(command);
+	    //Do something with command
+	}
+	return;
+}
+
+
 int main(int argc, char *argv[]) {
     client_t *c = NULL;	    /* A client to serve */
     int started = 0;	    /* Number of clients started */
@@ -119,6 +135,8 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "Usage: server\n");
 	exit(1);
     }
+
+	server_run();
 
     if ((c = client_create(started++)) )  {
 	client_run(c);
