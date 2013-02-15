@@ -109,11 +109,23 @@ client_t *client_create_no_window(char *in, char *out) {
     if (!new_Client) return NULL;
 
 	new_Client->delete = false;
-    /* Creates a window and set up a communication channel with it */
-    if( (new_Client->win = nowindow_create(in, outf))) return new_Client;
-    else {
-	free(new_Client);
-	return NULL;
+	
+	/* Creates a window and set up a communication channel with it */
+    if (!(new_Client->win = nowindow_create(in, outf))) { //If I don't get anything
+		free(new_Client);
+		return NULL;
+    }
+	
+	/*Create thread*/
+	pthread_t thread;
+	new_Client->thread = thread;
+	if (!pthread_create(&thread, NULL, client_run, new_Client)) {
+		pthread_detach(thread);
+		return new_Client;
+	}
+	else { //there were errors
+		free(new_Client);
+		return NULL;
     }
 }
 
@@ -150,7 +162,7 @@ void *client_run(void *arg)
 	client->delete = true;
 	to_delete++;
 	pthread_mutex_unlock(&mutex_to_delete);
-	putc("Press enter to close extra windows");
+	puts("Press enter to close any extra windows & threads");
 	return 0;
 }
 
@@ -191,6 +203,15 @@ INPUT_STATE handle_input() {
 					push(c);
 				}
 			}
+			else if (!strcmp(words[i],"E")) {
+				//if (words[i+1] != NULL)
+				if ((c = client_create_no_window(words[i+1], words[i+2])))
+				{
+					printf("Just created a nonwindowed client\n");
+					push(c);
+				}
+				break;
+			}
 		}
 		free_words(words);
 	}
@@ -223,7 +244,7 @@ int main(int argc, char *argv[]) {
 					*prev_ref = current->next;
 					//No need to join here, since this deletes the thread and its memory
 					client_destroy(current->self);
-					puts("Just destroyed a windowed client");
+					//puts("Just destroyed a windowed client");
 					to_delete--;
 					current = *prev_ref;
 				}
