@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+/* Thread sync init */
+pthread_rwlock_t rwlock_all = PTHREAD_RWLOCK_INITIALIZER;
+
 /* Forward declaration */
 node_t *search(char *, node_t *, node_t **);
 
@@ -228,11 +231,12 @@ void interpret_command(char *command, char *response, int len)
 	    strncpy(response, "ill-formed command", len - 1);
 	    return;
 	}
-
+	pthread_rwlock_rdlock(&rwlock_all); //Try to lock for reading, block if there is writer
 	query(name, response, len);
 	if (strlen(response) == 0) {
 	    strncpy(response, "not found", len - 1);
 	}
+	pthread_rwlock_unlock(&rwlock_all); //Unlock
 
 	return;
 
@@ -243,13 +247,14 @@ void interpret_command(char *command, char *response, int len)
 	    strncpy(response, "ill-formed command", len - 1);
 	    return;
 	}
-
+	pthread_rwlock_wrlock(&rwlock_all); //Try to lock for writing, block if there are readers
 	if (add(name, value)) {
 	    strncpy(response, "added", len - 1);
 	} else {
 	    strncpy(response, "already in database", len - 1);
 	}
-
+	pthread_rwlock_unlock(&rwlock_all); //Unlock
+	
 	return;
 
     case 'd':
@@ -259,12 +264,13 @@ void interpret_command(char *command, char *response, int len)
 	    strncpy(response, "ill-formed command", len - 1);
 	    return;
 	}
-
+	pthread_rwlock_wrlock(&rwlock_all); //Try to lock for writing, block if there are readers
 	if (xremove(name)) {
 	    strncpy(response, "removed", len - 1);
 	} else {
 	    strncpy(response, "not in database", len - 1);
 	}
+	pthread_rwlock_unlock(&rwlock_all); //Unlock
 
 	    return;
 
