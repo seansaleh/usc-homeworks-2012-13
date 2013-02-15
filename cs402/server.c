@@ -16,25 +16,49 @@
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
+#include <stdbool.h>
 
 /* the encapsulation of a client thread, i.e., the thread that handles
  * commands from clients */
 typedef struct Client {
 	pthread_t thread;
 	window_t *win;
+	bool delete; //Flag to tell server to delete, only gets written by client while locked out of server reading it, or during intilization
 } client_t;
 
-typedef enum INPUT_STATE {
+typedef enum INPUT_STATE { //enum for different states of the server
 	RUNNING,
 	WAITING_FOR_TERMINATIONS,
 	TERMINATED
 	} INPUT_STATE;
 	
+typedef struct NodeLinked { 
+	struct NodeLinked *next;
+	client_t* self;
+} node_l;
+
+/* initilize linked list */
+node_l* ll_head = NULL;
+
+int to_delete = 20; // Global variable that is always write locked
+pthread_mutex_t mutex_to_delete = PTHREAD_MUTEX_INITIALIZER;
+
+int started = 0;	    /* Number of clients started, just for naming purposes */
 
 /* Interface with a client: get requests, carry them out and report results */
 void *client_run(void *);
 /* Interface to the db routines.  Pass a command, get a result */
 int handle_command(char *, char *, int len);
+
+/* 
+ * add an item to a linked list
+ */
+void push(client_t* self) {
+node_l *this = (node_l *) malloc(sizeof(node_l));
+this->self = self;
+this->next = ll_head;
+ll_head = this;
+ }
 
 /*
  * Create an interactive client - one with its own window.  This routine
@@ -50,12 +74,26 @@ client_t *client_create(int ID) {
     if (!new_Client) return NULL;
 
     sprintf(title, "Client %d", ID);
+	new_Client->delete = false;
+	
+
 
     /* Creates a window and set up a communication channel with it */
-    if ((new_Client->win = window_create(title))) return new_Client;
-    else {
-	free(new_Client);
-	return NULL;
+    if (!(new_Client->win = window_create(title))) { //If I don't get anything
+		free(new_Client);
+		return NULL;
+    }
+	
+	/*Create thread*/
+	pthread_t thread;
+	new_Client->thread = thread;
+	if (!pthread_create(&thread, NULL, client_run, new_Client)) {
+		pthread_detach(thread);
+		return new_Client;
+	}
+	else { //there were errors
+		free(new_Client);
+		return NULL;
     }
 }
 
@@ -70,6 +108,7 @@ client_t *client_create_no_window(char *in, char *out) {
     client_t *new_Client = (client_t *) malloc(sizeof(client_t));
     if (!new_Client) return NULL;
 
+	new_Client->delete = false;
     /* Creates a window and set up a communication channel with it */
     if( (new_Client->win = nowindow_create(in, outf))) return new_Client;
     else {
@@ -94,7 +133,7 @@ void client_destroy(client_t *client) {
 void *client_run(void *arg)
 {
 	client_t *client = (client_t *) arg;
-
+	
 	/* main loop of the client: fetch commands from window, interpret
 	 * and handle them, return results to window. */
 	char *command = 0;
@@ -106,6 +145,12 @@ void *client_run(void *arg)
 	while (serve(client->win, response, &command, &clen) != -1) {
 	    handle_command(command, response, sizeof(response));
 	}
+	//Code to tell server to delete me
+	pthread_mutex_lock(&mutex_to_delete);
+	client->delete = true;
+	to_delete++;
+	pthread_mutex_unlock(&mutex_to_delete);
+	putc("Press enter to close extra windows");
 	return 0;
 }
 
@@ -120,6 +165,7 @@ int handle_command(char *command, char *response, int len) {
 
 void handle_server_command(char *command) {
 	puts(command);
+
 return;
 }
 
@@ -127,6 +173,7 @@ INPUT_STATE handle_input() {
 	// main loop of the server: fetch commands from main terminal,interpret and handle them, return results to main terminal.
 	char *command = 0;
 	char **words = NULL;
+	client_t *c = NULL;
 	size_t clen = 0;
 	/* response must be empty for the first call to serve */
 	if ( getline(&command, &clen, stdin)!= -1) {
@@ -136,7 +183,15 @@ INPUT_STATE handle_input() {
 		words = split_words(command);
 		int i = -1;
 		while (words[++i] != NULL)
-			handle_server_command(words[i]);
+		{
+			if (!strcmp(words[i],"e")) {
+				if ((c = client_create(started++)))
+				{
+					printf("Just created a windowed client\n");
+					push(c);
+				}
+			}
+		}
 		free_words(words);
 	}
 	else 
@@ -146,8 +201,7 @@ INPUT_STATE handle_input() {
 
 
 int main(int argc, char *argv[]) {
-    client_t *c = NULL;	    /* A client to serve */
-    int started = 0;	    /* Number of clients started */
+    //client_t *c = NULL;	    /* A client to serve */
 	INPUT_STATE my_state = RUNNING;
 
     if (argc != 1) {
@@ -155,35 +209,66 @@ int main(int argc, char *argv[]) {
 	exit(1);
     }
 
+
 	for (;;) {
-		if (0) // If There is a thread to cleanup
+		if (to_delete) // If there is a thread to cleanup
 		{
+			node_l** prev_ref = &ll_head;
+			node_l* current = ll_head;
+			pthread_mutex_lock(&mutex_to_delete);
+			while (to_delete>0 && current)
+			{
+				if (current->self->delete)
+				{
+					*prev_ref = current->next;
+					//No need to join here, since this deletes the thread and its memory
+					client_destroy(current->self);
+					puts("Just destroyed a windowed client");
+					to_delete--;
+					current = *prev_ref;
+				}
+				else 
+				{
+					prev_ref = &current->next;
+					current = current->next;
+				}
+			}
+			//This is an error state
+			if (current == NULL && to_delete>0) {
+				to_delete = 0;
+				puts("Error! to_delete was not 0 when trying to delete objects, indicates race condition");
+			}
 			//Cleanup
+			pthread_mutex_unlock(&mutex_to_delete);
 		}
 		else if (my_state==WAITING_FOR_TERMINATIONS)
 		{
-			if (0) // If all threads are terminated
+			if (!ll_head) // If all threads are terminated
 				my_state = RUNNING;
 		}
 		else if (my_state==RUNNING)
 		{
 			my_state = handle_input();
 		}
-		else if (my_state==TERMINATED&&started==0) // If there are no running threads
+		else if (my_state==TERMINATED&&!ll_head) // If there are no running threads
 		{
 			break;
 		}
+		else
+			sleep (0);
 	}
 	
 	/*DEPRECATED
     if ((c = client_create(started++)) )  {
-	client_run(c);
+	//client_run(c);
 	client_destroy(c);
     }
-	*/
+	/*/
 	
     fprintf(stderr, "Terminating.");
     /* Clean up the window data */
     window_cleanup();
+	/* Clean up mutex */
+	pthread_mutex_destroy(&mutex_to_delete);
     return 0;
 }
