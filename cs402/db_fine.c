@@ -71,13 +71,14 @@ void node_destroy(node_t * node) {
 void query(char *name, char *result, int len) {
     node_t *target;
 
-    target = search(name, &head, NULL);
+    target = search(name, &head, NULL); //This will read lock the target
 
     if (!target) {
 	strncpy(result, "not found", len - 1);
 	return;
     } else {
 	strncpy(result, target->value, len - 1);
+	pthread_rwlock_unlock(&target->rwlock_node); //unlock the returned target
 	return;
     }
 }
@@ -89,19 +90,22 @@ int add(char *name, char *value) {
 	node_t *target;	    /* The existing node with key name if any */
 	node_t *newnode;    /* The new node to add */
 
-	if ((target = search(name, &head, &parent))) {
+	if ((target = search(name, &head, &parent))) { //Locks target
 	    /* There is already a node with this key in the tree */
+		pthread_rwlock_unlock(&target->rwlock_node); //Unlock target
 	    return 0;
-	}
+	} //Otherwise there is no taget, it is null, no need to unlock a nonexistant lock
 
 	/* No idea how this could happen, but... */
 	if (!parent) return 0;
 
 	/* make the new node and attach it to parent */
 	newnode = node_create(name, value, 0, 0);
-
+	
+	pthread_rwlock_wrlock(&parent->rwlock_node); //Lock parent before writing to it
 	if (strcmp(name, parent->name) < 0) parent->lchild = newnode;
 	else parent->rchild = newnode;
+	pthread_rwlock_unlock(&parent->rwlock_node); //Unlock parent after writing to it
 
 	return 1;
 }
@@ -121,6 +125,7 @@ static inline void swap_pointers(char **a, char **b) {
 
 /* Remove the node with key name from the tree if it is there.  See inline
  * comments for algorithmic details.  Return true if something was deleted. */
+ //Note: lock parent before child, otherwise race condition
 int xremove(char *name) {
 	node_t *parent;	    /* Parent of the node to delete */
 	node_t *dnode;	    /* Node to delete */
@@ -129,11 +134,20 @@ int xremove(char *name) {
 			       can change that nodes children (see below). */
 
 	/* first, find the node to be removed */
-	if (!(dnode = search(name, &head, &parent))) {
+	if (!(dnode = search(name, &head, &parent))) {//dnode is now read locked from msearch
 	    /* it's not there */
 	    return 0;
 	}
-
+	//Write lock parent, this way no one tries to add anything to mess with us
+	//(Currently can't add since dnode is read locked)
+	pthread_rwlock_wrlock(&parent->rwlock_node);
+	//now can unlock the dnode since it can't be write locked
+	pthread_rwlock_unlock(&dnode->rwlock_node);
+	//Now try to write lock dnode
+	pthread_rwlock_wrlock(&dnode->rwlock_node);
+	//Now we have the write lock on the parent and the dnode, as is neccesary
+	//We still need the write lock on whoever replaces it and its parent, if we have to do a complicated switcharoo
+	
 	/* we found it.  Now check out the easy cases.  If the node has no
 	 * right child, then we can merely replace its parent's pointer to
 	 * it with the node's left child. */
@@ -144,6 +158,7 @@ int xremove(char *name) {
 		parent->rchild = dnode->lchild;
 
 	    /* done with dnode */
+		pthread_rwlock_unlock(&dnode->rwlock_node); // Just to be safe
 	    node_destroy(dnode);
 	} else if (dnode->lchild == 0) {
 	    /* ditto if the node had no left child */
@@ -153,6 +168,7 @@ int xremove(char *name) {
 		parent->rchild = dnode->rchild;
 
 	    /* done with dnode */
+		pthread_rwlock_unlock(&dnode->rwlock_node); // Just to be safe
 	    node_destroy(dnode);
 	} else {
 	    /* So much for the easy cases ...
@@ -170,18 +186,31 @@ int xremove(char *name) {
 	     * parent's lchild or rchild) */
 	    pnext = &dnode->rchild;
 	    next = *pnext;
+		/* Is it neccesary to read lock these? not sure, but there could be a race condition where a thread starts to switch while we are dong this switch?
+		*  Or will that deadlock, hmmmm... hopefully testing will answer these questions */
+		pthread_rwlock_rdlock(&next->rwlock_node); //Read lock as we go down looking for the correct node
 	    while (next->lchild != 0) {
 		    /* work our way down the lchild chain, finding the smallest
 		     * node in the subtree. */
 		    pnext = &next->lchild;
+			pthread_rwlock_rdlock(&(*pnext)->rwlock_node);//Lock next
+			pthread_rwlock_unlock(&next->rwlock_node); //Unlock was was locked
 		    next = *pnext;
 	    }
+		//Next is already read locked, as is dnode
+		pthread_rwlock_unlock(&next->rwlock_node); //read unlock
+		/*Right here what happens if there is a context switch? Look here for race condition bug maybe?*/
+		pthread_rwlock_wrlock(&next->rwlock_node); //write lock
 	    swap_pointers(&dnode->name, &next->name);
 	    swap_pointers(&dnode->value, &next->value);
 	    *pnext = next->rchild;
-
+		pthread_rwlock_unlock(&next->rwlock_node); //Unlock next
+		pthread_rwlock_unlock(&dnode->rwlock_node); //Unlock Dnode
 	    node_destroy(next);
     }
+	
+	pthread_rwlock_unlock(&parent->rwlock_node); // Unlock the parent
+
     return 1;
 }
 
@@ -191,6 +220,11 @@ int xremove(char *name) {
  * parent of the target node is stored.  If the target node is not found, the
  * location pointed to by parentpp is set to what would be the the address of
  * the parent of the target node, if it were there.
+ * 
+ * Lock logic: If next is null then it doesn't matter that we locked (error)
+ * if result was next then it is up to function that gets return to unlock
+ * if result was not it then when we exit our recursion we unlock
+ * parent does not stay locked
  *
  * Assumptions:
  * parent is not null and it does not contain name */
@@ -198,13 +232,16 @@ node_t *search(char *name, node_t * parent, node_t ** parentpp) {
 
     node_t *next;
     node_t *result;
+	pthread_rwlock_rdlock(&parent->rwlock_node); //Lock parent before reading it
 
     if (strcmp(name, parent->name) < 0) next = parent->lchild;
     else next = parent->rchild;
-
+	pthread_rwlock_unlock(&parent->rwlock_node); //Unlock parent after reading it
+	
     if (next == NULL) {
 	result = NULL;
     } else {
+	pthread_rwlock_rdlock(&next->rwlock_node); //Lock next before reading it
 	if (strcmp(name, next->name) == 0) {
 	    /* Note that this falls through to the if (parentpp .. ) statement
 	     * below. */
@@ -213,6 +250,7 @@ node_t *search(char *name, node_t * parent, node_t ** parentpp) {
 	    /* "We have to go deeper!" This recurses and returns from here
 	     * after the recursion has returned result and set parentpp */
 	    result = search(name, next, parentpp);
+		pthread_rwlock_unlock(&next->rwlock_node); //Unlock next since it is not our final
 	    return result;
 	}
     }
