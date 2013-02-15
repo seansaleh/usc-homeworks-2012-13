@@ -1,16 +1,29 @@
-#include "db.h"
+//#include "db.h"
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <pthread.h>
+
+typedef struct Node {
+	char *name;
+	char *value;
+	struct Node *lchild;
+	struct Node *rchild;
+	pthread_rwlock_t rwlock_node;
+} node_t;
+
+node_t head;
+
+void interpret_command(char *, char *, int);
 
 /* Forward declaration */
 node_t *search(char *, node_t *, node_t **);
 
 node_t head = { "", "", 0, 0 };
 /*
- * Allocate a new node with the given key, value and children.
+ * Allocate a new node with the given key, value and children. Includes a rw lock.
  */
 node_t *node_create(char *arg_name, char *arg_value, node_t * arg_left,
 	node_t * arg_right) {
@@ -29,7 +42,12 @@ node_t *node_create(char *arg_name, char *arg_value, node_t * arg_left,
 	free(new_node);
 	return NULL;
     }
-
+	
+	if(pthread_rwlock_init(&new_node->rwlock_node, NULL) !=0)
+		{
+		printf("rwlock init error, exiting \n");
+		exit(1);
+		}
     strcpy(new_node->name, arg_name);
     strcpy(new_node->value, arg_value);
     new_node->lchild = arg_left;
@@ -44,6 +62,7 @@ void node_destroy(node_t * node) {
      * case the node_destroy is called again. */
     if (node->name) {free(node->name); node->name = NULL; }
     if (node->value) { free(node->value); node->value = NULL; }
+	if (&node->rwlock_node) {pthread_rwlock_destroy(&node->rwlock_node);}
     free(node);
 }
 
