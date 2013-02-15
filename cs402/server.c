@@ -186,9 +186,10 @@ int handle_command(char *command, char *response, int len) {
     return 1;
 }
 
-
+/* fetch commands from main terminal,interpret and handle them, 
+*  return changes to state to main scheduler.
+*/
 INPUT_STATE handle_input() {
-	// main loop of the server: fetch commands from main terminal,interpret and handle them, return results to main terminal.
 	char *command = 0;
 	char **words = NULL;
 	client_t *c = NULL;
@@ -200,6 +201,10 @@ INPUT_STATE handle_input() {
 		}
 		words = split_words(command);
 		int i = -1;
+		/* This loop goes through each word and interprets it as a command, 
+		if it is an E and does not have arguments it stops looking for more commands, 
+		if it is a w it also stops waiting for more
+		*/
 		while (words[++i] != NULL)
 		{
 			if (!strcmp(words[i],"e")) {
@@ -261,10 +266,13 @@ int main(int argc, char *argv[]) {
 	exit(1);
     }
 
-
-	for (;;) {
+	/*This inifnite for loop is a scheduler, each else if statement represents a state
+	* that the software can be in, if there is nothing to handle then it sleeps to 
+	* give up context and tries again. This ensures the highest priority items happen first
+	*/
+	for (;;) { //Scheduler
 		if (to_delete) // If there is a thread to cleanup
-		{
+		{ //Iterate though a linked list looking for items to delete if their delete == true
 			node_l** prev_ref = &ll_head;
 			node_l* current = ll_head;
 			pthread_mutex_lock(&mutex_to_delete);
@@ -275,7 +283,6 @@ int main(int argc, char *argv[]) {
 					*prev_ref = current->next;
 					//No need to join here, since this deletes the thread and its memory
 					client_destroy(current->self);
-					//puts("Just destroyed a windowed client");
 					to_delete--;
 					current = *prev_ref;
 				}
@@ -290,15 +297,14 @@ int main(int argc, char *argv[]) {
 				to_delete = 0;
 				puts("Error! to_delete was not 0 when trying to delete objects, indicates race condition");
 			}
-			//Cleanup
 			pthread_mutex_unlock(&mutex_to_delete);
 		}
-		else if (my_state==WAITING_FOR_TERMINATIONS)
+		else if (my_state==WAITING_FOR_TERMINATIONS) //If The state is to not accept new input till everything termiantes
 		{
 			if (!ll_head) // If all threads are terminated
 				my_state = RUNNING;
 		}
-		else if (my_state==RUNNING)
+		else if (my_state==RUNNING) //If state is running then handle input
 		{
 			my_state = handle_input();
 		}
@@ -307,20 +313,13 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 		else
-			sleep (0);
+			sleep (0); //Give up context
 	}
-	
-	/*DEPRECATED
-    if ((c = client_create(started++)) )  {
-	//client_run(c);
-	client_destroy(c);
-    }
-	/*/
-	
+		
     fprintf(stderr, "Terminating.");
     /* Clean up the window data */
     window_cleanup();
-	/* Clean up mutex */
+	/* Clean up pthread stuff */
 	pthread_mutex_destroy(&mutex_to_delete);
 	pthread_mutex_destroy(&mutex_waiting);
 	pthread_cond_destroy(&cond_all_wait);
