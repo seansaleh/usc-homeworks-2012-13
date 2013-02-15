@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+/* Mutex to lock th edatabase */
+pthread_mutex_t mutex_coarse_lock = PTHREAD_MUTEX_INITIALIZER;
+
 /* Forward declaration */
 node_t *search(char *, node_t *, node_t **);
 
@@ -228,8 +231,10 @@ void interpret_command(char *command, char *response, int len)
 	    strncpy(response, "ill-formed command", len - 1);
 	    return;
 	}
-
+	
+	pthread_mutex_lock(&mutex_coarse_lock); //Lock before database operation
 	query(name, response, len);
+	pthread_mutex_unlock(&mutex_coarse_lock); //Unlock after database operation
 	if (strlen(response) == 0) {
 	    strncpy(response, "not found", len - 1);
 	}
@@ -243,12 +248,14 @@ void interpret_command(char *command, char *response, int len)
 	    strncpy(response, "ill-formed command", len - 1);
 	    return;
 	}
-
+	
+	pthread_mutex_lock(&mutex_coarse_lock); //Lock before database operation
 	if (add(name, value)) {
 	    strncpy(response, "added", len - 1);
 	} else {
 	    strncpy(response, "already in database", len - 1);
 	}
+	pthread_mutex_unlock(&mutex_coarse_lock); //Unlock after database operation
 
 	return;
 
@@ -259,13 +266,14 @@ void interpret_command(char *command, char *response, int len)
 	    strncpy(response, "ill-formed command", len - 1);
 	    return;
 	}
-
+	
+	pthread_mutex_lock(&mutex_coarse_lock); //Lock before database operation
 	if (xremove(name)) {
 	    strncpy(response, "removed", len - 1);
 	} else {
 	    strncpy(response, "not in database", len - 1);
 	}
-
+	pthread_mutex_unlock(&mutex_coarse_lock); //Unlock after database operation
 	    return;
 
     case 'f':
