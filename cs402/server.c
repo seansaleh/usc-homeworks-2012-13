@@ -32,7 +32,7 @@ typedef enum INPUT_STATE { //enum for different states of the server
 	TERMINATED
 	} INPUT_STATE;
 	
-typedef struct NodeLinked { 
+typedef struct NodeLinked { //Linkedlist for keeping track of clients
 	struct NodeLinked *next;
 	client_t* self;
 } node_l;
@@ -40,10 +40,16 @@ typedef struct NodeLinked {
 /* initilize linked list */
 node_l* ll_head = NULL;
 
-int to_delete = 20; // Global variable that is always write locked
+/*variable and mutex for knowing how many items to delete from linked list*/
+int to_delete = 0; // Global variable that is always write locked
 pthread_mutex_t mutex_to_delete = PTHREAD_MUTEX_INITIALIZER;
 
-int started = 0;	    /* Number of clients started, just for naming purposes */
+/*Mutex and condition for pausing all and going*/
+pthread_mutex_t mutex_waiting = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond_all_wait = PTHREAD_COND_INITIALIZER;
+bool wait_all = false;
+
+int started = 0;	  /* Number of clients started, just for naming purposes */
 
 /* Interface with a client: get requests, carry them out and report results */
 void *client_run(void *);
@@ -155,6 +161,11 @@ void *client_run(void *arg)
 
 	/* Serve until the other side closes the pipe */
 	while (serve(client->win, response, &command, &clen) != -1) {
+		if (wait_all) {
+			pthread_mutex_lock(&mutex_waiting);
+			pthread_cond_wait(&cond_all_wait, &mutex_waiting);
+			pthread_mutex_unlock(&mutex_waiting);
+		}
 	    handle_command(command, response, sizeof(response));
 	}
 	//Code to tell server to delete me
@@ -175,11 +186,6 @@ int handle_command(char *command, char *response, int len) {
     return 1;
 }
 
-void handle_server_command(char *command) {
-	puts(command);
-
-return;
-}
 
 INPUT_STATE handle_input() {
 	// main loop of the server: fetch commands from main terminal,interpret and handle them, return results to main terminal.
@@ -204,13 +210,38 @@ INPUT_STATE handle_input() {
 				}
 			}
 			else if (!strcmp(words[i],"E")) {
-				//if (words[i+1] != NULL)
+				
 				if ((c = client_create_no_window(words[i+1], words[i+2])))
 				{
 					printf("Just created a nonwindowed client\n");
 					push(c);
 				}
-				break;
+				if (words[i+1] != NULL&&words[i+2] != NULL)
+					i+=2;
+				else
+					break;
+			}
+			else if (!strcmp(words[i], "s")) {
+				pthread_mutex_lock(&mutex_waiting);
+				wait_all = true;
+				pthread_mutex_unlock(&mutex_waiting);
+			}
+			else if (!strcmp(words[i], "g")) {
+				pthread_mutex_lock(&mutex_waiting);
+				if (wait_all) {
+					wait_all = false;
+					pthread_cond_broadcast(&cond_all_wait);
+				}
+				pthread_mutex_unlock(&mutex_waiting);
+			}
+			else if (!strcmp(words[i], "w")) {
+				pthread_mutex_lock(&mutex_waiting);
+				if (wait_all) {
+					wait_all = false;
+					pthread_cond_broadcast(&cond_all_wait);
+				}
+				pthread_mutex_unlock(&mutex_waiting);
+				return WAITING_FOR_TERMINATIONS;
 			}
 		}
 		free_words(words);
@@ -291,5 +322,7 @@ int main(int argc, char *argv[]) {
     window_cleanup();
 	/* Clean up mutex */
 	pthread_mutex_destroy(&mutex_to_delete);
+	pthread_mutex_destroy(&mutex_waiting);
+	pthread_cond_destroy(&cond_all_wait);
     return 0;
 }
