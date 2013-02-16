@@ -138,13 +138,24 @@ int xremove(char *name) {
 	    /* it's not there */
 	    return 0;
 	}
+	
+	//--------now can unlock the dnode since it can't be write locked
+	//Changed this up since we had deadlock earlier
+	pthread_rwlock_unlock(&dnode->rwlock_node);
 	//Write lock parent, this way no one tries to add anything to mess with us
 	//(Currently can't add since dnode is read locked)
-	pthread_rwlock_wrlock(&parent->rwlock_node);
-	//now can unlock the dnode since it can't be write locked
-	pthread_rwlock_unlock(&dnode->rwlock_node);
+	pthread_rwlock_wrlock(&parent->rwlock_node); 
+	//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	//DEADLOCK HERE
+	//**************************
+	
+
 	//Now try to write lock dnode
 	pthread_rwlock_wrlock(&dnode->rwlock_node);
+	//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	//DEADLOCK HERE
+	//**************************
+	
 	//Now we have the write lock on the parent and the dnode, as is neccesary
 	//We still need the write lock on whoever replaces it and its parent, if we have to do a complicated switcharoo
 	
@@ -188,17 +199,17 @@ int xremove(char *name) {
 	    next = *pnext;
 		/* Is it neccesary to read lock these? not sure, but there could be a race condition where a thread starts to switch while we are dong this switch?
 		*  Or will that deadlock, hmmmm... hopefully testing will answer these questions */
-		pthread_rwlock_rdlock(&next->rwlock_node); //Read lock as we go down looking for the correct node
+//		pthread_rwlock_rdlock(&next->rwlock_node); //Read lock as we go down looking for the correct node
 	    while (next->lchild != 0) {
 		    /* work our way down the lchild chain, finding the smallest
 		     * node in the subtree. */
 		    pnext = &next->lchild;
-			pthread_rwlock_rdlock(&(*pnext)->rwlock_node);//Lock next
-			pthread_rwlock_unlock(&next->rwlock_node); //Unlock was was locked
+//			pthread_rwlock_rdlock(&(*pnext)->rwlock_node);//Lock next
+//			pthread_rwlock_unlock(&next->rwlock_node); //Unlock was was locked
 		    next = *pnext;
 	    }
 		//Next is already read locked, as is dnode
-		pthread_rwlock_unlock(&next->rwlock_node); //read unlock
+//		pthread_rwlock_unlock(&next->rwlock_node); //read unlock
 		/*Right here what happens if there is a context switch? Look here for race condition bug maybe?*/
 		pthread_rwlock_wrlock(&next->rwlock_node); //write lock
 	    swap_pointers(&dnode->name, &next->name);
