@@ -80,6 +80,7 @@ void query(char *name, char *result, int len) {
 	return;
     } else {
 	strncpy(result, target->value, len - 1);
+	pthread_rwlock_unlock(&target->rwlock_node);
 	return;
     }
 }
@@ -189,7 +190,7 @@ int xremove(char *name) {
 			
 			/* Lock the next to be searched, unlock what we are no longer using */
 			pthread_rwlock_wrlock(&(*pnext)->rwlock_node);
-			pthread_rwlock_wrlock(&next->rwlock_node);
+			pthread_rwlock_unlock(&next->rwlock_node);
 			
 		    next = *pnext;
 	    }
@@ -250,12 +251,16 @@ node_t *search(char *name, node_t * parent, node_t ** parentpp, bool write_lock)
 			 * after the recursion has returned result and set parentpp */
 			pthread_rwlock_unlock(&parent->rwlock_node); //Unlock Parent now, since we know we are not there
 			result = search(name, next, parentpp, write_lock);
+			
+			/*Since we acquire a lock on next during search when it i called the search's parent, we need to unlock it, but only the read ones */
+			if (!write_lock) pthread_rwlock_unlock(&next->rwlock_node); 
 			return result;
 		}
     }
 
     /* record a parent if we are looking for one */
-    if (parentpp != 0) *parentpp = parent;
+    if (parentpp != 0) {*parentpp = parent;}
+	else {pthread_rwlock_unlock(&parent->rwlock_node);}
 
     return (result);
 }
