@@ -1,7 +1,6 @@
-E left out1
-E right out2
+E tree out1
 w
 s
-E rightadd1000 out3
-E q1000 out4
+E remove out2
+E q6000 out3
 g
