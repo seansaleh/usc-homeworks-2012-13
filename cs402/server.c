@@ -161,11 +161,11 @@ void *client_run(void *arg)
 
 	/* Serve until the other side closes the pipe */
 	while (serve(client->win, response, &command, &clen) != -1) {
+	pthread_mutex_lock(&mutex_waiting);
 		if (wait_all) {
-			pthread_mutex_lock(&mutex_waiting);
 			pthread_cond_wait(&cond_all_wait, &mutex_waiting);
-			pthread_mutex_unlock(&mutex_waiting);
 		}
+		pthread_mutex_unlock(&mutex_waiting);
 	    handle_command(command, response, sizeof(response));
 	}
 	//Code to tell server to delete me
