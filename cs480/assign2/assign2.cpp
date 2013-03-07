@@ -36,6 +36,8 @@ float g_vLandRotate[3] = {0.0, 0.0, 0.0};
 float g_vLandTranslate[3] = {0.0, 0.0, 0.0};
 float g_vLandScale[3] = {1.0, 1.0, 1.0};
 
+double splineS = .5;
+
 /* represents one control point along the spline */
 struct point {
 	double x;
@@ -108,6 +110,71 @@ int loadSplines(char *argv) {
 /**********************************************************************************************/
 /* Application specific code */
 /**********************************************************************************************/
+
+
+void matrix4mult(GLdouble *in1, GLdouble *in2, GLdouble *out) {
+	for (int x = 0; x < 4; x++)
+		for (int y = 0; y < 4; y++)
+			out[4*x+y] = in1[y]*in2[4*x] + in1[4+y]*in2[1+4*x] + in1[8+y]*in2[2+4*x]+ in1[12+y]*in2[3+4*x];
+}
+
+point p(double u, spline *in, int x) {
+	point outP;
+
+	GLdouble uMatrix[16];
+	uMatrix[0] = u*u*u;	uMatrix[4] = u*u;	uMatrix[8] = u;		uMatrix[12] = 1;	
+	uMatrix[1] = 1;		uMatrix[5] = 1;		uMatrix[9] = 1;		uMatrix[13] = 1;	
+	uMatrix[2] = 1;		uMatrix[6] = 1;		uMatrix[10] = 1;	uMatrix[14] = 1;	
+	uMatrix[3] = 1;		uMatrix[7] = 1;		uMatrix[11] = 1;	uMatrix[15] = 1;	
+
+	GLdouble basisMatrix[16];
+
+	basisMatrix[0] = -1.0*splineS;	basisMatrix[4] = 2.0-splineS;	basisMatrix[8] = splineS-2.0;		basisMatrix[12] = splineS;
+	basisMatrix[1] = 2.0*splineS;	basisMatrix[5] = splineS-3.0;	basisMatrix[9] = 3.0-2.0*splineS;	basisMatrix[13] = -1.0*splineS;
+	basisMatrix[2] = -1.0*splineS;	basisMatrix[6] = 0.0;			basisMatrix[10] = splineS;			basisMatrix[14] = 0.0;
+	basisMatrix[3] = 0.0;			basisMatrix[7] = 1.0;			basisMatrix[11] = 0.0;				basisMatrix[15] = 0.0;
+
+
+	GLdouble controlM[16];
+
+	controlM[0] = (*in).points[x].x;	controlM[4] = (*in).points[x].y;	controlM[8] =(*in).points[x].z;		controlM[12] = 1;
+	controlM[1] = (*in).points[x+1].x;	controlM[5] = (*in).points[x+1].y;	controlM[9] =(*in).points[x+1].z;	controlM[13] = 1;
+	controlM[2] = (*in).points[x+2].x;	controlM[6] = (*in).points[x+2].y;	controlM[10]=(*in).points[x+2].z;	controlM[14] = 1;
+	controlM[3] = (*in).points[x+3].x;	controlM[7] = (*in).points[x+3].y;	controlM[11]=(*in).points[x+3].z;	controlM[15] = 1;
+
+	GLdouble halfway[16];
+	GLdouble output[16];
+	matrix4mult(uMatrix, basisMatrix, halfway);
+	matrix4mult(halfway, controlM, output);
+
+	outP.x = output[0];
+	outP.y = output[4];
+	outP.z = output[8];
+
+	return outP;
+}
+
+
+void renderSplines() {
+	glBegin(GL_LINES);
+	glLineWidth(5.0);
+	glColor3f(1.0,0.0,0.0);
+
+	point pPoint;
+	point pPointprev;
+
+	for ( int x = 0; x < g_iNumOfSplines; x++ )
+		for ( int y = 0; y < g_Splines[x].numControlPoints-3; y++) {
+			pPointprev = p((double)0.0,&(g_Splines[x]), y);
+			for (int u = 0; u <= 100; u++) {
+				pPoint = p((double)u/100.0,&(g_Splines[x]), y);
+				glVertex3d(pPointprev.x,pPointprev.y,pPointprev.z);
+				glVertex3d(pPoint.x,pPoint.y,pPoint.z);
+				pPointprev = pPoint;
+			}
+		}
+	glEnd();
+}
 
 //For Debug purposes
 void renderPlane()
@@ -310,7 +377,7 @@ void display()
 	glLoadIdentity();
 
 	//Setup Camera
-	gluLookAt(0,200,200, 0,0,0,0,1,0);
+	gluLookAt(0,50,50, 0,0,0,0,1,0);
 
 	//Rotate
 	glRotatef(g_vLandRotate[0],1.0,0.0,0.0);
@@ -323,6 +390,7 @@ void display()
 
 	//Draw after this
 	renderPlane(); //Is for debug
+	renderSplines();
 	//renderMap();
 
 	//Swap buffer since double buffering
@@ -342,6 +410,15 @@ int _tmain(int argc, _TCHAR* argv[])
 		exit(0);
 	}
 	loadSplines(argv[1]);
+
+	/* Matrix mult test code
+	GLdouble in1[16] = {1,4,1,1,2,3,4,3,3,1,2,2,4,2,3,4};
+	GLdouble in2[16] = {3,8,7,9,2,3,4,3,3,1,2,2,4,2,3,4};
+	GLdouble out[16];
+	matrix4mult(in1,in2,out);
+	out[0];
+	*/
+	//{{1,2,3,4},{4,3,1,2},{1,4,2,3},{1,3,2,4}} * {{1,2,3,4},{4,3,1,2},{1,4,2,3},{1,3,2,4}}
 
 	glutInit(&argc,(char**)argv);
 
