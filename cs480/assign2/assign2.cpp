@@ -31,6 +31,20 @@ CONTROLSTATE g_ControlState = ROTATE;
 bool recordingAndAnimating = false;
 int currentRecordingFrame = 0;
 
+Pic * g_pGroundTexture;
+GLuint groundTexture;
+
+Pic * g_pSkyboxTextureTop;
+GLuint skyboxTextureTop;
+Pic * g_pSkyboxTextureLeft;
+GLuint skyboxTextureLeft;
+Pic * g_pSkyboxTextureFront;
+GLuint skyboxTextureFront;
+Pic * g_pSkyboxTextureRight;
+GLuint skyboxTextureRight;
+Pic * g_pSkyboxTextureBack;
+GLuint skyboxTextureBack;
+
 /* state of the world */
 float g_vLandRotate[3] = {0.0, 0.0, 0.0};
 float g_vLandTranslate[3] = {0.0, 0.0, 0.0};
@@ -176,21 +190,87 @@ void renderSplines() {
 	glEnd();
 }
 
-//For Debug purposes
-void renderPlane()
+void renderGround()
 {
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, groundTexture);
 	glBegin(GL_POLYGON);
 
 	glColor3f(1.0, 1.0, 1.0);
-	glVertex3f(0.0, 0.0, 0.0);
-	glColor3f(0.0, 0.0, 1.0);
-	glVertex3f(0.0, 300.0, 0.0);
-	glColor3f(0.0, 0.0, 0.0);
-	glVertex3f(300.0, 300.0, 0.0);
-	glColor3f(1.0, 1.0, 0.0);
-	glVertex3f(300.0, 0.0, 0.0);
+	glTexCoord2f(0.0,0.0);	glVertex3f(-60.0, -60.0, -1.0);
+	//glColor3f(0.0, 0.0, 1.0);
+	glTexCoord2f(0.0,5.0);	glVertex3f(-60.0, 60.0, -1.0);
+	//glColor3f(0.0, 0.0, 0.0);
+	glTexCoord2f(5.0,5.0);	glVertex3f(60.0, 60.0, -1.0);
+	//glColor3f(1.0, 1.0, 0.0);
+	glTexCoord2f(5.0,0.0);	glVertex3f(60.0, -60.0, -1.0);
 
 	glEnd();
+	glDisable(GL_TEXTURE_2D);
+}
+
+void renderSkybox()
+{
+	//glDisable(GL_DEPTH_TEST);
+	//glPushMatrix();
+	//glLoadIdentity();
+
+	//To make the camera not move
+
+	float d = 100.0f;
+	glColor3f(1.0, 1.0, 1.0);
+
+	glEnable(GL_TEXTURE_2D);
+
+	/* Top */
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureTop);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0,	0);		glVertex3f(	-d,	-d,	d);
+		glTexCoord2f(1,	0);		glVertex3f(	 d,	-d,	d);
+		glTexCoord2f(1,	1);		glVertex3f(	 d,	 d,	d);
+		glTexCoord2f(0,	1);		glVertex3f(	-d,	 d,	d);
+	glEnd();
+
+	/* Left */
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureLeft);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0,	0);		glVertex3f(	-d,	-d,	d);
+		glTexCoord2f(1,	0);		glVertex3f(	-d,	d,	d);
+		glTexCoord2f(1,	1);		glVertex3f(	-d,	d,	-d);
+		glTexCoord2f(0,	1);		glVertex3f(	-d,	-d,	-d);
+	glEnd();
+
+	/* Front */
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureFront);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0,	0);		glVertex3f(	-d,	d,	d);
+		glTexCoord2f(1,	0);		glVertex3f(	d,	d,	d);
+		glTexCoord2f(1,	1);		glVertex3f(	d,	d,	-d);
+		glTexCoord2f(0,	1);		glVertex3f(	-d,	d,	-d);
+	glEnd();
+
+	/* Right */
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureRight);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0,	0);		glVertex3f(	d,	d,	d);
+		glTexCoord2f(1,	0);		glVertex3f(	d,	-d,	d);
+		glTexCoord2f(1,	1);		glVertex3f(	d,	-d,	-d);
+		glTexCoord2f(0,	1);		glVertex3f(	d,	d,	-d);
+	glEnd();
+
+	/* Back */
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureBack);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0,	0);		glVertex3f(	d,	-d,	d);
+		glTexCoord2f(1,	0);		glVertex3f(	-d,	-d,	d);
+		glTexCoord2f(1,	1);		glVertex3f(	-d,	-d,	-d);
+		glTexCoord2f(0,	1);		glVertex3f(	d,	-d,	-d);
+	glEnd();
+
+
+	glDisable(GL_TEXTURE_2D);
+	//glEnable(GL_DEPTH_TEST);
+	//glPopMatrix();
 }
 
 /**********************************************************************************************/
@@ -328,7 +408,102 @@ void glInit()
 {
 	/* setup gl view here */
 	glClearColor(0.0, 0.0, 0.0, 0.0);
+	
 	glEnable(GL_DEPTH_TEST);
+
+	/* Load top */
+	g_pSkyboxTextureTop = jpeg_read("textures\\calm_top.jpg", NULL);
+	if (!g_pSkyboxTextureTop)
+	{
+		printf ("error reading textures\\calm_top.jpg");
+		exit(1);
+	}
+	glGenTextures(1, &skyboxTextureTop);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureTop);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, g_pSkyboxTextureTop->pix);
+
+
+	/* Load Left */
+	g_pSkyboxTextureLeft = jpeg_read("textures\\calm_left.jpg", NULL);
+	if (!g_pSkyboxTextureLeft)
+	{
+		printf ("error reading textures\\calm_left.jpg");
+		exit(1);
+	}
+	glGenTextures(1, &skyboxTextureLeft);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureLeft);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, g_pSkyboxTextureLeft->pix);
+
+
+	/* Load Front */
+	g_pSkyboxTextureFront = jpeg_read("textures\\calm_front.jpg", NULL);
+	if (!g_pSkyboxTextureFront)
+	{
+		printf ("error reading textures\\calm_front.jpg");
+		exit(1);
+	}
+	glGenTextures(1, &skyboxTextureFront);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureFront);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, g_pSkyboxTextureFront->pix);
+
+	/* Load Right */
+	g_pSkyboxTextureRight = jpeg_read("textures\\calm_right.jpg", NULL);
+	if (!g_pSkyboxTextureRight)
+	{
+		printf ("error reading textures\\calm_right.jpg");
+		exit(1);
+	}
+	glGenTextures(1, &skyboxTextureRight);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureRight);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, g_pSkyboxTextureRight->pix);
+
+	/* Load Back */
+	g_pSkyboxTextureBack = jpeg_read("textures\\calm_back.jpg", NULL);
+	if (!g_pSkyboxTextureBack)
+	{
+		printf ("error reading textures\\calm_back.jpg");
+		exit(1);
+	}
+	glGenTextures(1, &skyboxTextureBack);
+	glBindTexture(GL_TEXTURE_2D, skyboxTextureBack);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, g_pSkyboxTextureBack->pix);
+
+	/* Load ground texture */
+	g_pGroundTexture = jpeg_read("textures\\ground.jpg", NULL);
+	if (!g_pGroundTexture)
+	{
+		printf ("error reading textures\\ground.jpg");
+		exit(1);
+	}
+	glGenTextures(1, &groundTexture);
+	glBindTexture(GL_TEXTURE_2D, groundTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, g_pGroundTexture->pix);
+
+
 }
 
 void reshape(int width, int height)
@@ -377,7 +552,7 @@ void display()
 	glLoadIdentity();
 
 	//Setup Camera
-	gluLookAt(0,50,50, 0,0,0,0,1,0);
+	gluLookAt(-15,-15,10, 0,0,0,0,0,1);
 
 	//Rotate
 	glRotatef(g_vLandRotate[0],1.0,0.0,0.0);
@@ -389,7 +564,8 @@ void display()
 	glTranslatef(g_vLandTranslate[0],g_vLandTranslate[1],g_vLandTranslate[2]);
 
 	//Draw after this
-	renderPlane(); //Is for debug
+	renderSkybox();
+	renderGround();
 	renderSplines();
 	//renderMap();
 
