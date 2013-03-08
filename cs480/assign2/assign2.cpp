@@ -31,6 +31,12 @@ CONTROLSTATE g_ControlState = ROTATE;
 bool recordingAndAnimating = false;
 int currentRecordingFrame = 0;
 
+//Game State
+int currentCoaster = 1;
+int currentSpline = 0;
+int currentU = 0;
+
+//Texture pointers
 Pic * g_pGroundTexture;
 GLuint groundTexture;
 
@@ -166,6 +172,79 @@ point p(double u, spline *in, int x) {
 	outP.z = output[8];
 
 	return outP;
+}
+
+point pTangent(double u, spline *in, int x) {
+	point outP;
+
+	GLdouble uMatrix[16];
+	uMatrix[0] = 3*u*u;	uMatrix[4] = 2*u;	uMatrix[8] = 1;		uMatrix[12] = 0;	
+	uMatrix[1] = 1;		uMatrix[5] = 1;		uMatrix[9] = 1;		uMatrix[13] = 1;	
+	uMatrix[2] = 1;		uMatrix[6] = 1;		uMatrix[10] = 1;	uMatrix[14] = 1;	
+	uMatrix[3] = 1;		uMatrix[7] = 1;		uMatrix[11] = 1;	uMatrix[15] = 1;	
+
+	GLdouble basisMatrix[16];
+
+	basisMatrix[0] = -1.0*splineS;	basisMatrix[4] = 2.0-splineS;	basisMatrix[8] = splineS-2.0;		basisMatrix[12] = splineS;
+	basisMatrix[1] = 2.0*splineS;	basisMatrix[5] = splineS-3.0;	basisMatrix[9] = 3.0-2.0*splineS;	basisMatrix[13] = -1.0*splineS;
+	basisMatrix[2] = -1.0*splineS;	basisMatrix[6] = 0.0;			basisMatrix[10] = splineS;			basisMatrix[14] = 0.0;
+	basisMatrix[3] = 0.0;			basisMatrix[7] = 1.0;			basisMatrix[11] = 0.0;				basisMatrix[15] = 0.0;
+
+
+	GLdouble controlM[16];
+
+	controlM[0] = (*in).points[x].x;	controlM[4] = (*in).points[x].y;	controlM[8] =(*in).points[x].z;		controlM[12] = 1;
+	controlM[1] = (*in).points[x+1].x;	controlM[5] = (*in).points[x+1].y;	controlM[9] =(*in).points[x+1].z;	controlM[13] = 1;
+	controlM[2] = (*in).points[x+2].x;	controlM[6] = (*in).points[x+2].y;	controlM[10]=(*in).points[x+2].z;	controlM[14] = 1;
+	controlM[3] = (*in).points[x+3].x;	controlM[7] = (*in).points[x+3].y;	controlM[11]=(*in).points[x+3].z;	controlM[15] = 1;
+
+	GLdouble halfway[16];
+	GLdouble output[16];
+	matrix4mult(uMatrix, basisMatrix, halfway);
+	matrix4mult(halfway, controlM, output);
+
+	outP.x = output[0];
+	outP.y = output[4];
+	outP.z = output[8];
+	
+	double magnitude = sqrt(outP.x*outP.x + outP.y*outP.y + outP.z*outP.z);
+	if (magnitude == 0.0)
+		magnitude = 0.0001;
+
+	outP.x /= magnitude;
+	outP.y /= magnitude;
+	outP.z /= magnitude;
+	
+	return outP;
+}
+
+void forwards(){
+	if (currentU < 100)
+		currentU+=10;
+	else if (currentSpline<g_Splines[currentCoaster].numControlPoints-4) {
+		currentSpline++;
+		currentU = 0;
+	}
+}
+
+void backwards() {
+	if (currentU>0)
+		currentU-=10;
+	else if (currentSpline>0) {
+		currentSpline--;
+		currentU = 100;
+	}
+}
+	/*
+	currentCoaster = 0;
+int currentSpline = 0;
+int currentU = 0;
+*/
+
+void rideCamera() {
+	point pPoint = p((double)currentU/100.0,&(g_Splines[currentCoaster]), currentSpline);
+	point tangent = pTangent((double)currentU/100.0,&(g_Splines[currentCoaster]), currentSpline);
+	gluLookAt(pPoint.x,pPoint.y,pPoint.z,pPoint.x+tangent.x,pPoint.y+tangent.y,pPoint.z+tangent.z,0,0,1);
 }
 
 
@@ -404,6 +483,22 @@ void menufunc(int value)
 	}
 }
 
+void keypress(unsigned char key, int x, int y){
+	switch (key)
+	{
+	case 'q':
+		exit(0);
+		break;
+	case 'w':
+		forwards();
+		break;
+	case 's':
+		backwards();
+		break;
+	}
+}
+
+
 void glInit()
 {
 	/* setup gl view here */
@@ -516,7 +611,7 @@ void reshape(int width, int height)
 	glLoadIdentity();
 
 	//Set persepective at 60degrees
-	gluPerspective(60.0,1.0*width/height, 0.1, 10000.0);
+	gluPerspective(60.0,1.0*width/height, 0.01, 500.0);
 
 	//Go back to normal mode just in case
 	glMatrixMode(GL_MODELVIEW);
@@ -552,7 +647,7 @@ void display()
 	glLoadIdentity();
 
 	//Setup Camera
-	gluLookAt(-15,-15,10, 0,0,0,0,0,1);
+	//gluLookAt(-15,-15,10, 0,0,0,0,0,1);
 
 	//Rotate
 	glRotatef(g_vLandRotate[0],1.0,0.0,0.0);
@@ -562,11 +657,14 @@ void display()
 	glScalef(g_vLandScale[0],g_vLandScale[1],g_vLandScale[2]);
 	//Translate
 	glTranslatef(g_vLandTranslate[0],g_vLandTranslate[1],g_vLandTranslate[2]);
+	
+	rideCamera();
 
 	//Draw after this
 	renderSkybox();
 	renderGround();
 	renderSplines();
+
 	//renderMap();
 
 	//Swap buffer since double buffering
@@ -626,7 +724,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	/* callback for reshaping window, also sets viewport and perspective */
 	glutReshapeFunc(reshape);
 
-	//glutKeyboardFunc(keypress);
+	glutKeyboardFunc(keypress);
 
 	/* do initialization */
 	glInit();
