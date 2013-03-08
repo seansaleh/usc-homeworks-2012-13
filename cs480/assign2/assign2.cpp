@@ -4,7 +4,7 @@
 /*
 	CSCI 480 Computer Graphics
 	Assignment 2: Simulating a Roller Coaster
-	C++ starter code
+	C++ code by Sean Saleh
 */
 
 #include "stdafx.h"
@@ -32,7 +32,7 @@ bool recordingAndAnimating = false;
 int currentRecordingFrame = 0;
 
 //Game State
-int currentCoaster = 1;
+int currentCoaster = 0;
 int currentSpline = 0;
 int currentU = 0;
 
@@ -77,6 +77,7 @@ struct spline *g_Splines;
 /* total number of splines */
 int g_iNumOfSplines;
 
+/* Presupplied code */
 int loadSplines(char *argv) {
 	char *cName = (char *)malloc(128 * sizeof(char));
 	FILE *fileList;
@@ -131,13 +132,14 @@ int loadSplines(char *argv) {
 /* Application specific code */
 /**********************************************************************************************/
 
-
-void matrix4mult(GLdouble *in1, GLdouble *in2, GLdouble *out) {
+/* Matrix Mulitply. Takes three 4x4 array, multiplies the first two and puts them in the out. Assumes out is initialized*/
+void matrix4mult(GLdouble *in1, GLdouble *in2, GLdouble *out) { //Test
 	for (int x = 0; x < 4; x++)
 		for (int y = 0; y < 4; y++)
 			out[4*x+y] = in1[y]*in2[4*x] + in1[4+y]*in2[1+4*x] + in1[8+y]*in2[2+4*x]+ in1[12+y]*in2[3+4*x];
 }
 
+/* Finds a point p given an array of splines, the specific spline, x, and the u along that spline*/
 point p(double u, spline *in, int x) {
 	point outP;
 
@@ -171,26 +173,28 @@ point p(double u, spline *in, int x) {
 	outP.y = output[4];
 	outP.z = output[8];
 
-
 	return outP;
 }
 
+/*Returns a cross product from two 3x1 arrays of doubles. Assumes output is initialized*/
 void crossproduct3d(GLdouble *in1, GLdouble *in2, GLdouble *output) {
 	output[0] = in1[1]*in2[2] - in2[1] * in1[2];
 	output[1] = in2[0]*in1[2] - in1[0] * in2[2];
 	output[2] = in1[0]*in2[1] - in1[1] * in2[0];
 }
 
+/*Normalizes a 3x1 matrix of doubles*/
 void normalize3d(GLdouble *input) {
 	double magnitude = sqrt(input[0]*input[0] + input[1]*input[1] + input[2]*input[2]);
-	if (magnitude == 0.0)
+	if (magnitude == 0.0) //No divide by 0
 		magnitude = 0.0001;
 
 	input[0] /= magnitude;
-	input[1]/= magnitude;
+	input[1] /= magnitude;
 	input[2] /= magnitude;
 }
 
+/*Returns the tangent of a point along a spline. Outputs to a 3x1 array of doubles that is assumed to be initiliazed. Takes in pointer to array of splines, interger in that spline, and the u*/
 void pTangent3d(double u, spline *in, int x, GLdouble *output) {
 	point outP;
 
@@ -227,6 +231,7 @@ void pTangent3d(double u, spline *in, int x, GLdouble *output) {
 	normalize3d(output);
 }
 
+/*Returns a normalized tangent as a point from a given spline input*/
 point pTangent(double u, spline *in, int x) {
 	point outP;
 
@@ -265,6 +270,7 @@ point pTangent(double u, spline *in, int x) {
 	return outP;
 }
 
+/*Changes the global game state to move coaster forwards along the current spline*/
 void forwards(){
 	if (currentU < 100)
 		currentU+=10;
@@ -274,6 +280,7 @@ void forwards(){
 	}
 }
 
+/*Changes the global game state to move coaster backwards along the current spline*/
 void backwards() {
 	if (currentU>0)
 		currentU-=10;
@@ -283,10 +290,13 @@ void backwards() {
 	}
 }
 
+/* Moves the camera position by using glulookAt() to be at the current globally defined point along the coaster */
 void rideCamera() {
 	point pPoint = p((double)currentU/100.0,&(g_Splines[currentCoaster]), currentSpline);
 	point tangentP = pTangent((double)currentU/100.0,&(g_Splines[currentCoaster]), currentSpline);
-	
+	gluLookAt(pPoint.x,pPoint.y,pPoint.z,pPoint.x+tangentP.x,pPoint.y+tangentP.y,pPoint.z+tangentP.z,0,0,1);
+
+	/*DEBUG CODE
 	GLdouble tangent[] = {0.,0.,0.};
 	GLdouble arbitrary[] = {0.,0.,0.};
 	GLdouble curN[] = {0.,0.,0.};
@@ -299,8 +309,6 @@ void rideCamera() {
 	crossproduct3d(tangent, curN, curB);
 	normalize3d(curB);
 
-	gluLookAt(pPoint.x,pPoint.y,pPoint.z,pPoint.x+tangentP.x,pPoint.y+tangentP.y,pPoint.z+tangentP.z,0,0,1);
-
 	glBegin(GL_LINES);
 	glColor3f(1.0,0.0,0.0);
 	glVertex3d(pPoint.x,pPoint.y,pPoint.z);
@@ -310,8 +318,10 @@ void rideCamera() {
 		glVertex3d(pPoint.x,pPoint.y,pPoint.z);
 		glVertex3d(pPoint.x+curN[0],pPoint.y+ curN[1],pPoint.z+ curN[2]);
 	glEnd();
+	*/
 }
 
+/* Renders splines. Uses global variables loaded from loadSplines()*/
 void renderSplines() {
 	glBegin(GL_LINES);
 	glLineWidth(5.0);
@@ -320,10 +330,10 @@ void renderSplines() {
 	point pPoint;
 	point pPointprev;
 
-	for ( int x = 0; x < g_iNumOfSplines; x++ )
-		for ( int y = 0; y < g_Splines[x].numControlPoints-3; y++) {
+	for ( int x = 0; x < g_iNumOfSplines; x++ )// For all tracks
+		for ( int y = 0; y < g_Splines[x].numControlPoints-3; y++) {//For all splines in a track
 			pPointprev = p((double)0.0,&(g_Splines[x]), y);
-			for (int u = 0; u <= 100; u++) {
+			for (int u = 0; u <= 100; u++) {//For all u's along the track
 				pPoint = p((double)u/100.0,&(g_Splines[x]), y);
 				glVertex3d(pPointprev.x,pPointprev.y,pPointprev.z);
 				glVertex3d(pPoint.x,pPoint.y,pPoint.z);
@@ -333,13 +343,16 @@ void renderSplines() {
 	glEnd();
 }
 
+/*Renders the rails as boxes. Draws quads defining the outside of a shape from the previous to current u value. Iterates through all splines*/
 void renderRails() {
 	glBegin(GL_QUADS);
-	glColor3f(0.0,0.0,1.0);
+	glColor3b(64,16,16);
 
+	/*Modifier to make the rail cross-section smaller or larger*/
 	double w = .05;
 	double h = .05;
 
+	/*Initialize all variables*/
 	point temp;
 	point tangentdebug;
 
@@ -355,11 +368,9 @@ void renderRails() {
 	GLdouble prevB[] = {0.,0.,0.};
 	GLdouble curB[] = {0.,0.,0.};
 
-	//point pTang;
-	//point pTangprev;
-
-	for ( int x = 0; x < g_iNumOfSplines; x++ )
-		for ( int y = 0; y < g_Splines[x].numControlPoints-3; y++) {
+	for ( int x = 0; x < g_iNumOfSplines; x++ ) // For all tracks
+		for ( int y = 0; y < g_Splines[x].numControlPoints-3; y++) {//For all splines in a track
+			//Get the previous for the very first spline
 			temp = p((double)0.0,&(g_Splines[x]), y);
 			prevPoint[0] = temp.x; prevPoint[1] = temp.y; prevPoint[2] = temp.z;
 
@@ -372,7 +383,8 @@ void renderRails() {
 			crossproduct3d(tangent, prevN, prevB);
 			normalize3d(prevB);
 
-			for (int u = 0; u <= 100; u++) {
+			for (int u = 0; u <= 100; u++) { //For all u's along the track
+				/*Calculate Tangent, point, N, and B*/
 				temp =  p((double)u/100.0,&(g_Splines[x]), y);
 				curPoint[0] = temp.x; curPoint[1] = temp.y; curPoint[2] = temp.z;
 
@@ -383,6 +395,7 @@ void renderRails() {
 				crossproduct3d(tangent, curN, curB);
 				normalize3d(curB);
 
+				/*Define all of the corners of the "box"*/
 				GLdouble v0[] = {prevPoint[0] + prevN[0]*w - prevB[0]*h	,prevPoint[1] +  prevN[1]*w - prevB[1]*h	,prevPoint[2] +  prevN[2]*w - prevB[2]*h	};
 				GLdouble v1[] = {prevPoint[0] + prevN[0]*w + prevB[0]*h	,prevPoint[1] +  prevN[1]*w + prevB[1]*h	,prevPoint[2] +  prevN[2]*w + prevB[2]*h	};
 				GLdouble v2[] = {prevPoint[0] - prevN[0]*w + prevB[0]*h	,prevPoint[1] -  prevN[1]*w + prevB[1]*h	,prevPoint[2] -  prevN[2]*w + prevB[2]*h	};
@@ -392,6 +405,7 @@ void renderRails() {
 				GLdouble v6[] = {curPoint[0]  - curN[0]*w  + curB[0]*h	,curPoint[1]  -  curN[1]*w + curB[1]*h		,curPoint[2]  -  curN[2]*w  + curB[2]*h		};
 				GLdouble v7[] = {curPoint[0]  - curN[0]*w  - curB[0]*h	,curPoint[1]  -  curN[1]*w - curB[1]*h		,curPoint[2]  -  curN[2]*w  - curB[2]*h		};
 
+				/*Draw each poly*/
 				glVertex3dv(v0); glVertex3dv(v1); glVertex3dv(v5); glVertex3dv(v4);
 
 				glVertex3dv(v1); glVertex3dv(v2); glVertex3dv(v6); glVertex3dv(v5);
@@ -400,6 +414,7 @@ void renderRails() {
 
 				glVertex3dv(v0); glVertex3dv(v3); glVertex3dv(v7); glVertex3dv(v4);
 
+				/*Set current to previous*/
 				prevPoint[0] = curPoint[0];	prevPoint[1] = curPoint[1];	prevPoint[2] = curPoint[2]; 
 				prevN[0] = curN[0];			prevN[1] = curN[1];			prevN[2] = curN[2]; 
 				prevB[0] = curB[0];			prevB[1] = curB[1];			prevB[2] = curB[2]; 
@@ -408,6 +423,7 @@ void renderRails() {
 	glEnd();
 }
 
+/*Texture maps the ground and draws a polygon for the ground*/
 void renderGround()
 {
 	glEnable(GL_TEXTURE_2D);
@@ -427,6 +443,7 @@ void renderGround()
 	glDisable(GL_TEXTURE_2D);
 }
 
+/*Renders 5 quads in the distance as a skybox. Uses a seperate texture for each quad. Texture is designed to look seamless when used as a skybox*/
 void renderSkybox()
 {
 	//glDisable(GL_DEPTH_TEST);
@@ -637,7 +654,7 @@ void keypress(unsigned char key, int x, int y){
 	}
 }
 
-
+/*Initializes textures and loads them in*/
 void glInit()
 {
 	/* setup gl view here */
@@ -769,8 +786,8 @@ void doIdle()
 		saveScreenshot(name);
 		currentRecordingFrame++;
 		
-		//Rotate
-		g_vLandRotate[1]+=2;
+		//animate
+		forwards();
 
 	}
 	
@@ -802,10 +819,8 @@ void display()
 	//Draw after this
 	renderSkybox();
 	renderGround();
-	renderSplines();
+	//renderSplines();
 	renderRails();
-
-	//renderMap();
 
 	//Swap buffer since double buffering
 	glutSwapBuffers();

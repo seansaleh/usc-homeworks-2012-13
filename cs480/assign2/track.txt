@@ -1,3 +1,2 @@
-2
-splines/circle.sp
+1
 splines/goodRide.sp
