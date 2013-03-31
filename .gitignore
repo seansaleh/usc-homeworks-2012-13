@@ -179,3 +179,27 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+
+########## weenix
+bochsout.txt
+inittmp.gdb
+commands.gdb
+
+# normal build system output
+disk0.img
+disk0.vmdk
+*.[oad]
+*.pyc
+*.gdbcomm
+*.so
+
+.staging
+# editor temporary files
+\#*\#
+*~
+.*.swp
+*.tmp
+*.bak
+*.orig
+*.nfs*
+
