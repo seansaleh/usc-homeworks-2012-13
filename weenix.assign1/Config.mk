@@ -25,7 +25,7 @@
 #
 # If you change this value make clean and make
 
-	GDBWAIT=1
+	GDBWAIT=0
 
 #
 # Setting any of these variables will control which parts of the source tree
