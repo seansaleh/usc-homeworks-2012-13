@@ -245,7 +245,6 @@ initproc_create(void)
 {
 		/*Don't forget to set proc_initproc when you create the init process*/
 		proc_t *init = proc_create("init");
-		proc_initproc = init;
 		kthread_t *init_thread = kthread_create(init, initproc_run, 0, NULL);
         /*NOT_YET_IMPLEMENTED("PROCS: initproc_create");*/
         return init_thread;

@@ -87,6 +87,8 @@ proc_create(char *name)
 	p = slab_obj_alloc(proc_allocator);
 	
 	p->p_pid = _proc_getid();
+	if (p->p_pid == 1)
+		proc_initproc = p;
 	
 	strncpy(p->p_comm, name, PROC_NAME_LEN);
 		/*
