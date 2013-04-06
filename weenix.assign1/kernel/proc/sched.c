@@ -204,5 +204,12 @@ sched_switch(void)
 void
 sched_make_runnable(kthread_t *thr)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");
+	uint8_t prev_ipl = intr_getipl();
+	intr_setipl(IPL_HIGH);
+	
+	thr->kt_state = KT_RUN;
+	ktqueue_enqueue(&kt_runq, thr);
+	
+	intr_setipl(prev_ipl);
+        /*NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");*/
 }

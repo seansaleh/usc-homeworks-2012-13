@@ -83,7 +83,6 @@ proc_t *
 proc_create(char *name)
 {
 	proc_t *p;
-	proc_init();
 	p = slab_obj_alloc(proc_allocator);
 	
 	p->p_pid = _proc_getid();
@@ -103,7 +102,9 @@ proc_create(char *name)
 	list_init(&p->p_children);
 	p->p_pproc = curproc;
 	
+	list_link_init(&p->p_list_link);
 	list_insert_tail(&_proc_list, &p->p_list_link);
+	list_link_init(&p->p_child_link);
 	if (p->p_pproc)
 		list_insert_tail(&p->p_pproc->p_children, &p->p_child_link);	
 	
@@ -223,8 +224,46 @@ proc_thread_exited(void *retval)
 pid_t
 do_waitpid(pid_t pid, int options, int *status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: do_waitpid");
-        return 0;
+	if (pid<-1 || pid==0 || options != 0 
+		|| list_empty(&curproc->p_children) /*If curproc has no children*/
+		|| proc_lookup(pid)->p_pproc != curproc /*If the pid's parent is not the cur proc*/
+		)
+		return -ECHILD; 
+		
+	proc_t * proc_todelete;
+		
+	if(pid == -1)
+		{
+		while(1) {
+			list_iterate_begin(&curproc->p_children, proc_todelete, proc_t, p_list_link) {
+				if (proc_todelete->p_status == PROC_DEAD) {
+					pid = proc_todelete->p_pid;
+					goto cleanup;
+				}
+			} list_iterate_end();
+			
+			sched_sleep_on(&curproc->p_wait);
+		}
+	}
+	else {
+		proc_todelete = proc_lookup(pid);
+		while (proc_todelete->p_state == PROC_RUNNING) {
+			sched_sleep_on(&curproc->p_wait);
+			}
+		}
+
+cleanup:
+		/*
+		Unlink child proc
+		Free child paging
+		Free child proc structure
+		*/
+		list_remove(&proc_todelete->p_child_link);
+		pt_destroy_pagedir(proc_todelete->p_pagedir);
+		slab_obj_free(proc_allocator, proc_todelete);
+		
+        /*NOT_YET_IMPLEMENTED("PROCS: do_waitpid");*/
+        return pid;
 }
 
 /*

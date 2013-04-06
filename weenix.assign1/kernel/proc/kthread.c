@@ -75,7 +75,6 @@ kthread_t *
 kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
 	kthread_t *t;
-	kthread_init();
 	t = slab_obj_alloc(kthread_allocator);
 	
 	/*Check for NULL*/
@@ -88,7 +87,9 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 	
 	t->kt_state = KT_RUN;
 	/*Is this what I need to do?*/
+	list_link_init(&t->kt_plink);
 	list_insert_tail(&p->p_threads, &t->kt_plink);
+	list_link_init(&t->kt_qlink);
 	
 		/*NOT_YET_IMPLEMENTED("PROCS: kthread_create");*/
     return t;
