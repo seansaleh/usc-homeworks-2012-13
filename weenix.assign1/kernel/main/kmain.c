@@ -148,8 +148,7 @@ bootstrap(int arg1, void *arg2)
         pt_template_init();
 
 		proc_t *idle = proc_create("idle");
-		kthread_t *idlethread = NULL;
-		idlethread = kthread_create(idle, idleproc_run, 0, NULL);
+		kthread_t *idlethread = kthread_create(idle, idleproc_run, 0, NULL);
 		curproc = idle;
 		curthr = idlethread;
 		

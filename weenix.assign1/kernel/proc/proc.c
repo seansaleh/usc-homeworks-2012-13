@@ -101,6 +101,11 @@ proc_create(char *name)
 	
 	list_init(&p->p_threads);
 	list_init(&p->p_children);
+	p->p_pproc = curproc;
+	
+	list_insert_tail(&_proc_list, &p->p_list_link);
+	if (p->p_pproc)
+		list_insert_tail(&p->p_pproc->p_children, &p->p_child_link);	
 	
 	p->p_state = PROC_RUNNING;
 	sched_queue_init(&p->p_wait);
