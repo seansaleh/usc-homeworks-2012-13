@@ -147,14 +147,15 @@ bootstrap(int arg1, void *arg2)
         /* necessary to finalize page table information */
         pt_template_init();
 
-        //NOT_YET_IMPLEMENTED("PROCS: bootstrap");
 		proc_t *idle = proc_create("idle");
-		kthread_t *idlethread = kthread_create(idle,idleproc_run(),0,null);
-		curproc = proc_t;
+		kthread_t *idlethread = NULL;
+		idlethread = kthread_create(idle, idleproc_run, 0, NULL);
+		curproc = idle;
 		curthr = idlethread;
 		
-		context_make_active(idlethread->kt_ctx);
-
+		context_make_active(&idlethread->kt_ctx);
+		/*NOT_YET_IMPLEMENTED("PROCS: bootstrap");*/
+		
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
         return NULL;
 }

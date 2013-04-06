@@ -78,19 +78,19 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 	kthread_init();
 	t = slab_obj_alloc(kthread_allocator);
 	
-	//Check for NULL
+	/*Check for NULL*/
 	char *kt_kstack = alloc_stack();
 	t->kt_kstack = kt_kstack;
 	
-	context_setup(t->kt_ctx,func, arg1, arg2, t->kt_kstack, DEFAULT_STACK_SIZE, p->p_pagedir);
+	context_setup(&t->kt_ctx,func, arg1, arg2, t->kt_kstack, DEFAULT_STACK_SIZE, p->p_pagedir);
 
 	t->kt_proc = p;
 	
-	kt_state = KT_RUN;
-	//Is this what I need to do?
+	t->kt_state = KT_RUN;
+	/*Is this what I need to do?*/
 	list_insert_tail(&p->p_threads, &t->kt_plink);
 	
-		//NOT_YET_IMPLEMENTED("PROCS: kthread_create");
+		/*NOT_YET_IMPLEMENTED("PROCS: kthread_create");*/
     return t;
 }
 
