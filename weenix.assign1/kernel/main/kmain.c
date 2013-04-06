@@ -147,13 +147,19 @@ bootstrap(int arg1, void *arg2)
         /* necessary to finalize page table information */
         pt_template_init();
 
-        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
+        //NOT_YET_IMPLEMENTED("PROCS: bootstrap");
+		proc_t *idle = proc_create("idle");
+		kthread_t *idlethread = kthread_create(idle,idleproc_run(),0,null);
+		curproc = proc_t;
+		curthr = idlethread;
+		
+		context_make_active(idlethread->kt_ctx);
 
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
         return NULL;
 }
 
-/**
+/** 
  * Once we're inside of idleproc_run(), we are executing in the context of the
  * first process-- a real context, so we can finally begin running
  * meaningful code.
@@ -236,6 +242,7 @@ idleproc_run(int arg1, void *arg2)
 static kthread_t *
 initproc_create(void)
 {
+		/*Don't forget to set proc_initproc when you create the init process*/
         NOT_YET_IMPLEMENTED("PROCS: initproc_create");
         return NULL;
 }

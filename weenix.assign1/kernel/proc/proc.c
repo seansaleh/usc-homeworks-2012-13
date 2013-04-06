@@ -82,8 +82,34 @@ failed:
 proc_t *
 proc_create(char *name)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_create");
-        return NULL;
+	proc_t *p;
+	proc_init();
+	p = slab_obj_alloc(proc_allocator);
+	
+	p->p_pid = _proc_getid();
+	
+	char p_comm[PROC_NAME_LEN];
+	strncopy(p_comm, name, PROC_NAME_LEN);
+		/*
+		So that PROC_NAME_LEN is null terminated. 
+		Note that I assume the rest of the code may read past the end of PROC_NAME_LEN.
+		May cause errors for names of PROC_NAME_LEN 
+		if the rest of the code does not assume this 
+		*/
+	name[PROC_NAME_LEN-1] = '\0'; 
+	p->p_comm = name; 
+	
+	list_init(&p->p_threads);
+	list_init(&p->p_children);
+	
+	p->p_state = PROC_RUNNING;
+	sched_queue_init(&p->p_wait);
+	
+	//Need to catch NULL error here?
+	p->p_pagedir = pt_create_pagedir();
+
+        //NOT_YET_IMPLEMENTED("PROCS: proc_create");
+    return p;
 }
 
 /**
