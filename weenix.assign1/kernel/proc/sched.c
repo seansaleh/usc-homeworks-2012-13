@@ -127,6 +127,8 @@ sched_sleep_on(ktqueue_t *q)
 int
 sched_cancellable_sleep_on(ktqueue_t *q)
 {
+	if (curthr->kt_cancelled)
+		return -EINTR;
 	curthr->kt_state = KT_SLEEP_CANCELLABLE;
 	ktqueue_enqueue(q, curthr);
 	
@@ -175,6 +177,11 @@ sched_cancel(struct kthread *kthr)
 		ktqueue_dequeue(kthr->kt_wchan);
 		sched_make_runnable(kthr);
 	}
+	
+	/*
+	else if (kthr->kt_state == KT_RUN) {
+		ktqueue_dequeue(kthr->kt_wchan);
+	}*/
 }
 
 /*

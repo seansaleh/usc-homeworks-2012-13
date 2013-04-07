@@ -85,6 +85,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 
 	t->kt_proc = p;
 	
+	t->kt_cancelled = 0;
 	t->kt_wchan = NULL;
 	t->kt_state = KT_RUN;
 	/*Is this what I need to do?*/
@@ -121,6 +122,13 @@ kthread_destroy(kthread_t *t)
 void
 kthread_cancel(kthread_t *kthr, void *retval)
 {
+	kthr->kt_retval = retval;
+	kthr->kt_cancelled = 1;
+	if (kthr == curthr){
+		kthread_exit(retval);
+	}
+	else {
+	sched_cancel(kthr); }
         NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
 }
 
