@@ -162,6 +162,7 @@ proc_cleanup(int status)
 	/* Find parent's thread that is waiting on curproc's ktqueue_t p_wait */
 	sched_broadcast_on(&curproc->p_pproc->p_wait);
 	curproc->p_state = PROC_DEAD;
+	list_remove(&curproc->p_list_link);
 	sched_switch();
         /*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
 }
@@ -245,7 +246,8 @@ do_waitpid(pid_t pid, int options, int *status)
 {
 	if (pid<-1 || pid==0 || options != 0 
 		|| list_empty(&curproc->p_children) /*If curproc has no children*/
-		|| (pid!=-1 && proc_lookup(pid)->p_pproc != curproc) /*If the pid's parent is not the cur proc*/
+		|| (pid>0 && proc_lookup(pid) != NULL && proc_lookup(pid)->p_pproc != curproc) /*If the pid's parent is not the cur proc*/
+		|| (pid>0 && proc_lookup(pid)==NULL) /* If the pid does not exist */
 		)
 		return -ECHILD; 
 		
