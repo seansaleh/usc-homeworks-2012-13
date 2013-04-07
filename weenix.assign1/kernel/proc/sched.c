@@ -148,9 +148,6 @@ sched_broadcast_on(ktqueue_t *q)
 	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
 		t = ktqueue_dequeue(q);
 		sched_make_runnable(t);
-		
-		if (sched_queue_empty(q))
-			return;
 	} list_iterate_end();
 }
 
@@ -211,24 +208,22 @@ sched_switch(void)
 	/* Do I need to enque prevthr?
 	 * Do I need to continue running prevthr if it is still runnable */
 	/*for bugs check Run Queue Access Slide */
-	kthread_t *prevthr = curthr;
-	proc_t *prevproc;
+
 	uint8_t prev_ipl = intr_getipl();
-	
-	
 	intr_setipl(IPL_HIGH);
-	kthread_t *t = ktqueue_dequeue(&kt_runq);
+	
+	kthread_t *prevthr = curthr;
+	
 	if (prevthr->kt_state == KT_RUN)
 		ktqueue_enqueue(&kt_runq, prevthr);
-	 /*If state is run then 
-	 ktqueue_enqueue(&kt_runq, prevthr);*/
-	while (!t) { 
+
+	while (sched_queue_empty(&kt_runq)) { 
 		intr_setipl(IPL_LOW);
 		intr_wait();
 		intr_setipl(IPL_HIGH);
-		t = ktqueue_dequeue(&kt_runq);
 	}
 	/*If there is a thread*/
+	kthread_t *t = ktqueue_dequeue(&kt_runq);
 	
 	curproc = t->kt_proc;
 	curthr = t; 

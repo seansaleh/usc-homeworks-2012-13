@@ -254,14 +254,18 @@ do_waitpid(pid_t pid, int options, int *status)
 	if(pid == -1)
 		{
 		while(1) {
-			list_iterate_begin(&curproc->p_children, proc_todelete, proc_t, p_list_link) {
-				if (proc_todelete->p_status == PROC_DEAD) {
+			int x = 0;
+			list_iterate_begin(&curproc->p_children, proc_todelete, proc_t, p_child_link) {
+				/*KASSERT(0);*/
+				if (proc_todelete->p_state == PROC_DEAD) {
 					pid = proc_todelete->p_pid;
 					goto cleanup;
-				}
-			} list_iterate_end();
-			
+					}
+				} list_iterate_end();
+			x++;
 			sched_sleep_on(&curproc->p_wait);
+			if (x>1)
+				panic("This should not run more than once, in do_waitpid. Should always find a dead child if returns from sleep"); 
 		}
 	}
 	else {
