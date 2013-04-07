@@ -100,7 +100,19 @@ sched_queue_empty(ktqueue_t *q)
 void
 sched_sleep_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");
+	/*
+	enqueue on this
+	get off run queue
+	context_switch
+	*/
+	curthr->kt_state = KT_SLEEP;
+	ktqueue_enqueue(q, curthr);
+	
+	ktqueue_remove(&kt_runq, curthr);
+	sched_switch();
+	
+	
+       /* NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");*/
 }
 
 
@@ -185,7 +197,26 @@ sched_cancel(struct kthread *kthr)
 void
 sched_switch(void)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_switch");
+	kthread_t *prevthr = curthr;
+	proc_t *prevproc;
+	uint8_t prev_ipl = intr_getipl();
+	
+	
+	intr_setipl(IPL_HIGH);
+	kthread_t *t = ktqueue_dequeue(&kt_runq);
+	while (!t) { 
+		intr_setipl(IPL_LOW);
+		intr_wait();
+		intr_setipl(IPL_HIGH);
+		t = ktqueue_dequeue(&kt_runq);
+	}
+	/*If there is a thread*/
+	
+	curproc = t->kt_proc;
+	curthr = t; 
+	intr_setipl(prev_ipl);	
+       /* NOT_YET_IMPLEMENTED("PROCS: sched_switch");*/
+	context_switch(&prevthr->kt_ctx, &curthr->kt_ctx);
 }
 
 /*

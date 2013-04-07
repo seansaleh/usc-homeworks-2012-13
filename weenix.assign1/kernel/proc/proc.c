@@ -226,7 +226,7 @@ do_waitpid(pid_t pid, int options, int *status)
 {
 	if (pid<-1 || pid==0 || options != 0 
 		|| list_empty(&curproc->p_children) /*If curproc has no children*/
-		|| proc_lookup(pid)->p_pproc != curproc /*If the pid's parent is not the cur proc*/
+		|| (pid!=-1 && proc_lookup(pid)->p_pproc != curproc) /*If the pid's parent is not the cur proc*/
 		)
 		return -ECHILD; 
 		
