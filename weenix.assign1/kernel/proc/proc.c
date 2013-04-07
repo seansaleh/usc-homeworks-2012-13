@@ -145,7 +145,25 @@ proc_create(char *name)
 void
 proc_cleanup(int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");
+	curproc->p_status = status;
+	/*
+	* X Sets exit status
+	* X Reparent children to init
+	* Cleans up as much as possible -
+	* (can't throw away page table)
+	* Wake up any waiting parent
+	* Context switches thread out forever
+	*/
+	proc_t *temp;
+	list_iterate_begin(&curproc->p_children, temp, proc_t, p_list_link) {
+            temp->p_pproc = proc_initproc;
+        } list_iterate_end();
+	
+	/* Find parent's thread that is waiting on curproc's ktqueue_t p_wait */
+	sched_broadcast_on(&curproc->p_pproc->p_wait);
+	curproc->p_state = PROC_DEAD;
+	sched_switch();
+        /*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
 }
 
 /*
@@ -203,7 +221,8 @@ proc_list()
 void
 proc_thread_exited(void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");
+	proc_cleanup((int *)retval);
+        /*NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");*/
 }
 
 /* If pid is -1 dispose of one of the exited children of the current
@@ -262,7 +281,6 @@ cleanup:
 		pt_destroy_pagedir(proc_todelete->p_pagedir);
 		slab_obj_free(proc_allocator, proc_todelete);
 		
-        /*NOT_YET_IMPLEMENTED("PROCS: do_waitpid");*/
         return pid;
 }
 

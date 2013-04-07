@@ -137,7 +137,10 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
+	curthr->kt_retval = retval;
+	curthr->kt_state = KT_EXITED;
+	
+	proc_thread_exited(retval);
 }
 
 /*

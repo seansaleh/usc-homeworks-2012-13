@@ -133,14 +133,26 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 kthread_t *
 sched_wakeup_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");
-        return NULL;
+	kthread_t *t = NULL;
+	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
+		t->kt_state = KT_RUN;
+		q->tq_size --;
+		list_remove(&t->kt_qlink);
+			return t;
+	} list_iterate_end();
 }
 
 void
 sched_broadcast_on(ktqueue_t *q)
-{
-        NOT_YET_IMPLEMENTED("PROCS: sched_broadcast_on");
+{ /*DEBUG?*/
+	kthread_t *t;
+	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
+		t->kt_state = KT_RUN;
+		q->tq_size --;
+		list_remove(&t->kt_qlink);
+		if (list_empty(&q->tq_list))
+			return;
+	} list_iterate_end();
 }
 
 /*
@@ -197,6 +209,7 @@ sched_cancel(struct kthread *kthr)
 void
 sched_switch(void)
 {
+	/*for bugs check Run Queue Access Slide */
 	kthread_t *prevthr = curthr;
 	proc_t *prevproc;
 	uint8_t prev_ipl = intr_getipl();
