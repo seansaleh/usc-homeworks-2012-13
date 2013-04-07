@@ -10,7 +10,7 @@
 # Set which CS402 tests are to run.  See the assignment for details.  Valid
 # from 0 (no tests except running init) to 10 ( run all tests plus student
 # tests)
-     CS402TESTS=10
+     CS402TESTS=0
 
 
 # Set whether or not to loop in kmain waiting for a gdb attach.  This is a hack
