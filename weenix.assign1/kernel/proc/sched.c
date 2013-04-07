@@ -174,7 +174,7 @@ sched_cancel(struct kthread *kthr)
 	kthr->kt_cancelled = 1;
 	
 	if (kthr->kt_state == KT_SLEEP_CANCELLABLE) {
-		ktqueue_dequeue(kthr->kt_wchan);
+		ktqueue_remove(kthr->kt_wchan, kthr);
 		sched_make_runnable(kthr);
 	}
 	

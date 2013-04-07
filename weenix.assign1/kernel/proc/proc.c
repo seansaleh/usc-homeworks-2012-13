@@ -160,8 +160,8 @@ proc_cleanup(int status)
 			list_insert_tail(&temp->p_pproc->p_children, &temp->p_child_link);
         } list_iterate_end();
 	
-	/* Find parent's thread that is waiting on curproc's ktqueue_t p_wait */
 	sched_broadcast_on(&curproc->p_pproc->p_wait);
+	sched_broadcast_on(&curproc->p_wait);
 	curproc->p_state = PROC_DEAD;
 	sched_switch();
         /*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
