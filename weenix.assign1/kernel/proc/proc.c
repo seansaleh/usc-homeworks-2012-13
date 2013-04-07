@@ -157,12 +157,12 @@ proc_cleanup(int status)
 	proc_t *temp;
 	list_iterate_begin(&curproc->p_children, temp, proc_t, p_list_link) {
             temp->p_pproc = proc_initproc;
+			list_insert_tail(&temp->p_pproc->p_children, &temp->p_child_link);
         } list_iterate_end();
 	
 	/* Find parent's thread that is waiting on curproc's ktqueue_t p_wait */
 	sched_broadcast_on(&curproc->p_pproc->p_wait);
 	curproc->p_state = PROC_DEAD;
-	list_remove(&curproc->p_list_link);
 	sched_switch();
         /*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
 }
@@ -283,6 +283,7 @@ cleanup:
 		Free child paging
 		Free child proc structure
 		*/
+		list_remove(&proc_todelete->p_list_link);
 		list_remove(&proc_todelete->p_child_link);
 		pt_destroy_pagedir(proc_todelete->p_pagedir);
 		slab_obj_free(proc_allocator, proc_todelete);
