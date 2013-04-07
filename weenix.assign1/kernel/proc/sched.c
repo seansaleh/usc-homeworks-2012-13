@@ -108,7 +108,8 @@ sched_sleep_on(ktqueue_t *q)
 	curthr->kt_state = KT_SLEEP;
 	ktqueue_enqueue(q, curthr);
 	
-	ktqueue_remove(&kt_runq, curthr);
+	/*Why did i do this?
+	ktqueue_remove(&kt_runq, curthr);*/
 	sched_switch();
 	
 	
@@ -134,23 +135,21 @@ kthread_t *
 sched_wakeup_on(ktqueue_t *q)
 {
 	kthread_t *t = NULL;
-	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
-		q->tq_size --;
-		list_remove(&t->kt_qlink);
-		sched_make_runnable(t);
-			return t;
-	} list_iterate_end();
+	
+	t = ktqueue_dequeue(q);
+	sched_make_runnable(t);
+	return t;
 }
 
 void
 sched_broadcast_on(ktqueue_t *q)
-{ /*DEBUG?*/
+{ 
 	kthread_t *t;
 	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
-		q->tq_size --;
-		list_remove(&t->kt_qlink);
+		t = ktqueue_dequeue(q);
 		sched_make_runnable(t);
-		if (list_empty(&q->tq_list))
+		
+		if (sched_queue_empty(q))
 			return;
 	} list_iterate_end();
 }
@@ -219,6 +218,8 @@ sched_switch(void)
 	
 	intr_setipl(IPL_HIGH);
 	kthread_t *t = ktqueue_dequeue(&kt_runq);
+	if (prevthr->kt_state == KT_RUN)
+		ktqueue_enqueue(&kt_runq, prevthr);
 	 /*If state is run then 
 	 ktqueue_enqueue(&kt_runq, prevthr);*/
 	while (!t) { 

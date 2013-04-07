@@ -293,7 +293,8 @@ cleanup:
 void
 do_exit(int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: do_exit");
+	kthread_exit(&status);
+        /*NOT_YET_IMPLEMENTED("PROCS: do_exit");*/
 }
 
 size_t
