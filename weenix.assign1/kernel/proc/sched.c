@@ -135,9 +135,9 @@ sched_wakeup_on(ktqueue_t *q)
 {
 	kthread_t *t = NULL;
 	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
-		t->kt_state = KT_RUN;
 		q->tq_size --;
 		list_remove(&t->kt_qlink);
+		sched_make_runnable(t);
 			return t;
 	} list_iterate_end();
 }
@@ -147,9 +147,9 @@ sched_broadcast_on(ktqueue_t *q)
 { /*DEBUG?*/
 	kthread_t *t;
 	list_iterate_begin(&q->tq_list, t, kthread_t, kt_qlink) {
-		t->kt_state = KT_RUN;
 		q->tq_size --;
 		list_remove(&t->kt_qlink);
+		sched_make_runnable(t);
 		if (list_empty(&q->tq_list))
 			return;
 	} list_iterate_end();
@@ -209,6 +209,8 @@ sched_cancel(struct kthread *kthr)
 void
 sched_switch(void)
 {
+	/* Do I need to enque prevthr?
+	 * Do I need to continue running prevthr if it is still runnable */
 	/*for bugs check Run Queue Access Slide */
 	kthread_t *prevthr = curthr;
 	proc_t *prevproc;
@@ -217,6 +219,8 @@ sched_switch(void)
 	
 	intr_setipl(IPL_HIGH);
 	kthread_t *t = ktqueue_dequeue(&kt_runq);
+	 /*If state is run then 
+	 ktqueue_enqueue(&kt_runq, prevthr);*/
 	while (!t) { 
 		intr_setipl(IPL_LOW);
 		intr_wait();
@@ -227,9 +231,10 @@ sched_switch(void)
 	
 	curproc = t->kt_proc;
 	curthr = t; 
-	intr_setipl(prev_ipl);	
        /* NOT_YET_IMPLEMENTED("PROCS: sched_switch");*/
 	context_switch(&prevthr->kt_ctx, &curthr->kt_ctx);
+		intr_setipl(prev_ipl);	
+
 }
 
 /*
