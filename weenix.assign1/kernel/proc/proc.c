@@ -159,7 +159,7 @@ proc_cleanup(int status)
 	* Context switches thread out forever
 	*/
 	proc_t *temp;
-	list_iterate_begin(&curproc->p_children, temp, proc_t, p_list_link) {
+	list_iterate_begin(&curproc->p_children, temp, proc_t, p_child_link) {
             temp->p_pproc = proc_initproc;
 			/*KASSERT(temp->p_child_link->l_next != 0xbbbbbbbb);*/
 			/*DEBUG: Maybe I should make sure child link exists? but why should it end up like that ever?*/

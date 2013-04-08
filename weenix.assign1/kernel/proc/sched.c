@@ -236,6 +236,7 @@ sched_switch(void)
 		ktqueue_enqueue(&kt_runq, prevthr);
 
 	while (sched_queue_empty(&kt_runq)) { 
+		panic("I never actually wait on things here");
 		intr_setipl(IPL_LOW);
 		intr_wait();
 		intr_setipl(IPL_HIGH);

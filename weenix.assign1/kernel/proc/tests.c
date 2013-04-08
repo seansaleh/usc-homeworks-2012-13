@@ -112,6 +112,7 @@ void *kthread_exit_test(int arg1, void *arg2) {
  * cancelled, it prints an error message.
  */
 void *wakeme_test(int arg1, void *arg2) {
+	/*myline*/dbg_print("wakeme_test running pid (%d)\n", curproc->p_pid);
     wake_me_len++;
     if (sched_cancellable_sleep_on(&wake_me_q) == -EINTR ) {
 	dbg_print("Wakeme cancelled?! pid (%d)\n", curproc->p_pid);
@@ -250,6 +251,7 @@ void *mutex_test_cancelme(int arg1, void *arg2) {
  * all become children of init.
  */
 void *reparent_test(int arg1, void *arg2) {
+	/*myline*/dbg_print("reparent_test running pid (%d)\n , arg1: (%d)\n", curproc->p_pid, arg1);
     start_proc("reparented" , wakeme_test, arg1);
     if ( arg1 > 1 ) 
 	start_proc("reparent ", reparent_test, arg1-1);
