@@ -106,7 +106,11 @@ proc_create(char *name)
 	list_insert_tail(&_proc_list, &p->p_list_link);
 	list_link_init(&p->p_child_link);
 	if (p->p_pproc)
-		list_insert_tail(&p->p_pproc->p_children, &p->p_child_link);	
+		list_insert_tail(&p->p_pproc->p_children, &p->p_child_link);
+	else if (p->p_pid > 1) {
+		panic("Only Idle thread should not be on a child list!");
+	}
+	
 	
 	p->p_state = PROC_RUNNING;
 	sched_queue_init(&p->p_wait);
@@ -157,6 +161,9 @@ proc_cleanup(int status)
 	proc_t *temp;
 	list_iterate_begin(&curproc->p_children, temp, proc_t, p_list_link) {
             temp->p_pproc = proc_initproc;
+			/*KASSERT(temp->p_child_link->l_next != 0xbbbbbbbb);*/
+			/*DEBUG: Maybe I should make sure child link exists? but why should it end up like that ever?*/
+			/*list_remove(&temp->p_child_link);*/
 			list_insert_tail(&temp->p_pproc->p_children, &temp->p_child_link);
         } list_iterate_end();
 	
