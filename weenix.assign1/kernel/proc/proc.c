@@ -89,14 +89,19 @@ proc_create(char *name)
 	if (p->p_pid == 1)
 		proc_initproc = p;
 	
-	strncpy(p->p_comm, name, PROC_NAME_LEN);
-		/*
-		So that PROC_NAME_LEN is null terminated. 
-		Note that I assume the rest of the code may read past the end of PROC_NAME_LEN.
-		May cause errors for names of PROC_NAME_LEN 
-		if the rest of the code does not assume this 
-		*/
-	p->p_comm[PROC_NAME_LEN-1] = '\0'; 
+	if (1) { /*Set to 0 to cause student test 1 (if CS402TESTS>=9) to break the code */
+		strncpy(p->p_comm, name, PROC_NAME_LEN);
+			/*
+			So that PROC_NAME_LEN is null terminated. 
+			Note that I assume the rest of the code may read past the end of PROC_NAME_LEN.
+			May cause errors for names of PROC_NAME_LEN 
+			if the rest of the code does not assume this 
+			*/
+		p->p_comm[PROC_NAME_LEN-1] = '\0'; 
+	}
+	else { /*This is to break the code to make sure my first test does test for a potential error */
+		strcpy(p->p_comm, name);
+	}
 	
 	list_init(&p->p_threads);
 	list_init(&p->p_children);
@@ -281,7 +286,6 @@ do_waitpid(pid_t pid, int options, int *status)
 		while(1) {
 			int x = 0;
 			list_iterate_begin(&curproc->p_children, proc_todelete, proc_t, p_child_link) {
-				/*KASSERT(0);*/
 				if (proc_todelete->p_state == PROC_DEAD) {
 					pid = proc_todelete->p_pid;
 					goto cleanup;
@@ -308,6 +312,12 @@ cleanup:
 		*/
 		list_remove(&proc_todelete->p_list_link);
 		list_remove(&proc_todelete->p_child_link);
+		
+		kthread_t *t;
+		list_iterate_begin(&proc_todelete->p_threads, t, kthread_t, kt_plink) {
+			kthread_destroy(t);
+		} list_iterate_end();
+		
 		pt_destroy_pagedir(proc_todelete->p_pagedir);
 		slab_obj_free(proc_allocator, proc_todelete);
 		
