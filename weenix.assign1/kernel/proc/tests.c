@@ -428,10 +428,10 @@ void *testproc(int arg1, void *arg2) {
 #endif
 #if CS402TESTS > 9
     dbg_print("kill all while still running test");
-    for ( i=0 ; i < 10; i++ )
+    for ( i=0 ; i < 2; i++ )
 	start_proc("kill all while still running test", cancelme_test, 0);
     proc_kill_all();
-	stop_until_queued(10, &wake_me_len);
+	/*stop_until_queued(2, &wake_me_len);*/
     wait_for_all();
     KASSERT(wake_me_len == 0 && "Error on wakeme bookkeeping");
 

@@ -116,7 +116,7 @@ proc_create(char *name)
 		panic("Only Idle thread should not be on a child list!");
 	}
 	
-	
+	p->p_status = 0;
 	p->p_state = PROC_RUNNING;
 	sched_queue_init(&p->p_wait);
 	
@@ -317,6 +317,8 @@ cleanup:
 		list_iterate_begin(&proc_todelete->p_threads, t, kthread_t, kt_plink) {
 			kthread_destroy(t);
 		} list_iterate_end();
+		
+		status = proc_todelete->p_status;
 		
 		pt_destroy_pagedir(proc_todelete->p_pagedir);
 		slab_obj_free(proc_allocator, proc_todelete);
