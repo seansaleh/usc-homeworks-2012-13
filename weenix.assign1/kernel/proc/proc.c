@@ -118,7 +118,6 @@ proc_create(char *name)
 	/*Need to catch NULL error here?*/
 	p->p_pagedir = pt_create_pagedir();
 
-        /*NOT_YET_IMPLEMENTED("PROCS: proc_create");*/
     return p;
 }
 
@@ -171,7 +170,6 @@ proc_cleanup(int status)
 	sched_broadcast_on(&curproc->p_wait);
 	curproc->p_state = PROC_DEAD;
 	sched_switch();
-        /*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
 }
 
 /*
@@ -197,6 +195,13 @@ proc_kill(proc_t *p, int status)
 void
 proc_kill_all()
 {
+	/*kthread_destroy()*/
+	/* Check to make sure these lists still exist?
+			list_remove(&proc_todelete->p_list_link);
+		list_remove(&proc_todelete->p_child_link);
+		pt_destroy_pagedir(proc_todelete->p_pagedir);
+		slab_obj_free(proc_allocator, proc_todelete);
+*/
         NOT_YET_IMPLEMENTED("PROCS: proc_kill_all");
 }
 
@@ -230,7 +235,6 @@ void
 proc_thread_exited(void *retval)
 {
 	proc_cleanup((int *)retval);
-        /*NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");*/
 }
 
 /* If pid is -1 dispose of one of the exited children of the current

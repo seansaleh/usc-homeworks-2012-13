@@ -265,6 +265,7 @@ initproc_run(int arg1, void *arg2)
 {
         testproc(arg1, arg2);
 		/*My test: name longer than 256*/
+		/*My test: test proc_kill_all when there is something on the runqueue*/
         return NULL;
 }
 

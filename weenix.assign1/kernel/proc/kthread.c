@@ -129,7 +129,6 @@ kthread_cancel(kthread_t *kthr, void *retval)
 	}
 	else {
 	sched_cancel(kthr); }
-        NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
 }
 
 /*
