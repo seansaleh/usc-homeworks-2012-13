@@ -122,6 +122,7 @@ kthread_destroy(kthread_t *t)
 void
 kthread_cancel(kthread_t *kthr, void *retval)
 {
+/*When do we call this?*/
 	kthr->kt_retval = retval;
 	kthr->kt_cancelled = 1;
 	if (kthr == curthr){

@@ -183,7 +183,15 @@ proc_cleanup(int status)
 void
 proc_kill(proc_t *p, int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_kill");
+		if(p == curproc)
+			do_exit(status);
+		else {
+			kthread_t *t;
+			list_iterate_begin(&p->p_threads, t, kthread_t, kt_plink) {
+				/*if (t->kt_proc != proc_initproc)*/
+				sched_cancel(t);
+			} list_iterate_end();	
+		}
 }
 
 /*
@@ -202,7 +210,11 @@ proc_kill_all()
 		pt_destroy_pagedir(proc_todelete->p_pagedir);
 		slab_obj_free(proc_allocator, proc_todelete);
 */
-        NOT_YET_IMPLEMENTED("PROCS: proc_kill_all");
+		proc_t *p;
+		list_iterate_begin(&_proc_list, p, proc_t, p_list_link) {
+			if (p->p_pid>1)
+				proc_kill(p, 0);
+		} list_iterate_end();
 }
 
 proc_t *
