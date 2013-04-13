@@ -14,6 +14,8 @@ Name: Sean Saleh
 #include <stdio.h>
 #include <string>
 
+#include <math.h>
+
 #define MAX_TRIANGLES 2000
 #define MAX_SPHERES 10
 #define MAX_LIGHTS 10
@@ -31,6 +33,8 @@ int mode=MODE_DISPLAY;
 
 //the field of view of the camera
 #define fov 60.0
+#define M_PI       3.14159265358979323846
+
 
 unsigned char buffer[HEIGHT][WIDTH][3];
 
@@ -72,13 +76,68 @@ int num_triangles=0;
 int num_spheres=0;
 int num_lights=0;
 
+double perpixel_width;
+double perpixel_height;
+double screen_left;
+double screen_bottom;
+
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 
+unsigned char clamp_convert(double color) { /*Expects a float for color hopefully between 0 and 1 */
+	if (color > 1.f)
+		color = 1.f;
+	else if (color <= 0.f)
+	{
+		color = 0.f;
+		return 0; //To prevent devide by 0 errors
+	}
+	return (unsigned char) (255 * color);
+}
+
+void set_global_perpixel_distance() {
+	double aspect;
+	aspect = (double)WIDTH / (double)HEIGHT;
+	double left = - aspect * tan(fov/2.f*M_PI/180);
+	double right = aspect * tan(fov/2.f*M_PI/180);
+	double top = tan((fov/2.f)*(M_PI/180));
+	double bottom = - tan(fov/2.f*M_PI/180);
+	// actually solve for these corners
+
+	double width = right-left;
+	double height = top-bottom;
+
+	perpixel_width = width / WIDTH;
+	perpixel_height = height / HEIGHT;
+	screen_left = left;
+	screen_bottom = bottom;
+}
+
+void convert_world_position(double *screen_position, int x, int y) {
+	screen_position[2] = -1.f;
+	screen_position[0] = screen_left + perpixel_width/2 + x*perpixel_width;
+	screen_position[1] = screen_bottom + perpixel_height/2 + y*perpixel_height;
+}
+
+
+void cast_ray(int x, int y) {
+	double r, g, b;
+	r = g = b = 1.f;
+	double screen_position[3];
+	convert_world_position(screen_position, x, y);
+
+
+
+
+
+	plot_pixel(x,y,r,g,b);
+}
+
 //MODIFY THIS FUNCTION
 void draw_scene()
 {
+  set_global_perpixel_distance();
   unsigned int x,y;
   //simple output
   for(x=0; x<WIDTH; x++)
@@ -87,7 +146,7 @@ void draw_scene()
     glBegin(GL_POINTS);
     for(y=0;y < HEIGHT;y++)
     {
-      plot_pixel(x,y,x%256,y%256,(x+y)%256);
+		cast_ray(x,y);
     }
     glEnd();
     glFlush();
@@ -276,7 +335,7 @@ void idle()
   {
       draw_scene();
       if(mode == MODE_JPEG)
-	save_jpg();
+		save_jpg();
     }
   once=1;
 }
