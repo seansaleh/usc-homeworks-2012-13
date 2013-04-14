@@ -2,10 +2,7 @@ Assignment #3: Ray tracing
 
 
 
-FULL NAME: !!!replaceme!!!
-
-
-
+FULL NAME: Sean Saleh
 
 MANDATORY FEATURES
 

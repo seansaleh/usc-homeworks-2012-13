@@ -120,18 +120,78 @@ void convert_world_position(double *screen_position, int x, int y) {
 	screen_position[1] = screen_bottom + perpixel_height/2 + y*perpixel_height;
 }
 
+void normalize3d(double *input, double *output) {
+	double magnitude = sqrt(input[0]*input[0] + input[1]*input[1] + input[2]*input[2]);
+	if (magnitude == 0.0) //No divide by 0
+		magnitude = 0.0001;
+
+	output[0] = input[0] / magnitude;
+	output[1] = input[1] / magnitude;
+	output[2] = input[2] / magnitude;
+}
+
+Triangle * collide_triangle(double *world_position, double * distance_out, double * translation) {
+	//TODO
+	return NULL;
+}
+
+Sphere* collide_sphere(double *world_position, double * distance_out, double * translation){
+	Sphere * cur_sphere = NULL;
+	double normal_ray[3];
+	normalize3d(world_position, normal_ray);
+	for(int x = 0; x < num_spheres; x++) {
+		/*This math from the slides for ray-sphere intersection*/
+		double b = 2 * (normal_ray[0]*(translation[0]-spheres[x].position[0]) + normal_ray[1]*(translation[1]-spheres[x].position[1]) + normal_ray[2]*(translation[2]-spheres[x].position[2]));
+		double c = (translation[0]-spheres[x].position[0])*(translation[0]-spheres[x].position[0]) + (translation[1]-spheres[x].position[1])*(translation[1]-spheres[x].position[1]) + (translation[2]-spheres[x].position[2])*(translation[2]-spheres[x].position[2]) - spheres[x].radius*spheres[x].radius;
+		double inside = b*b - 4 * c;
+
+		if (inside >=0) { //Else unreal answer, abort
+			double t0 = (-b + sqrt(inside))/2;
+			double t1 = (-b - sqrt(inside))/2;
+			if (t0 > 0.f && t1 > 0.f) { //Else inside sphere, abort
+				if (t0 < *distance_out) { //If Closer
+					*distance_out = t0;
+					cur_sphere = &spheres[x];
+				}
+				if (t1 < *distance_out) { //If Closerer
+					*distance_out = t0;
+					cur_sphere = &spheres[x];
+				}
+			}
+		}
+	}
+	return cur_sphere;
+}
+
 
 void cast_ray(int x, int y) {
 	double r, g, b;
-	r = g = b = 1.f;
+	r = ambient_light[0];
+	g = ambient_light[1];
+	b = ambient_light[2];
 	double screen_position[3];
 	convert_world_position(screen_position, x, y);
 
+	double translation [3] = {0.0f, 0.0f, 0.0f};
+
+	double sphere_distance	= 200000000000.f;
+	Sphere *hit_sphere = collide_sphere(screen_position, &sphere_distance, translation);
+
+	double tri_distance		= 100000000000.f;
+	Triangle *hit_triangle = collide_triangle(screen_position, &tri_distance, translation);
+
+	if (sphere_distance<tri_distance && hit_sphere) {
+		//Check shadow ray, change math here also with each light
+		r += hit_sphere->color_diffuse[0];
+		g += hit_sphere->color_diffuse[1];
+		b += hit_sphere->color_diffuse[2];
+		//+=Phong Shade
+	} else if (hit_triangle) {
+
+	} //else didn't hit 
 
 
-
-
-	plot_pixel(x,y,r,g,b);
+	plot_pixel(x,y,clamp_convert(r),clamp_convert(g),clamp_convert(b));
 }
 
 //MODIFY THIS FUNCTION
