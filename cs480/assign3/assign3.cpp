@@ -135,10 +135,16 @@ Triangle * collide_triangle(double *world_position, double * distance_out, doubl
 	return NULL;
 }
 
-Sphere* collide_sphere(double *world_position, double * distance_out, double * translation){
+Sphere* collide_sphere(double * direction, double * distance_out, double * translation){
 	Sphere * cur_sphere = NULL;
 	double normal_ray[3];
-	normalize3d(world_position, normal_ray);
+
+	double transformed_direction[3];
+	transformed_direction[0] = direction[0] - translation[0];
+	transformed_direction[1] = direction[1] - translation[1];
+	transformed_direction[2] = direction[2] - translation[2];
+	normalize3d(transformed_direction, normal_ray);
+
 	for(int x = 0; x < num_spheres; x++) {
 		/*This math from the slides for ray-sphere intersection*/
 		double b = 2 * (normal_ray[0]*(translation[0]-spheres[x].position[0]) + normal_ray[1]*(translation[1]-spheres[x].position[1]) + normal_ray[2]*(translation[2]-spheres[x].position[2]));
@@ -163,17 +169,37 @@ Sphere* collide_sphere(double *world_position, double * distance_out, double * t
 	return cur_sphere;
 }
 
+bool check_in_shadow(double * source_transform, Light * destination_light) {
+	//TODO: Check here for colliding with self
+	double sphere_distance = sqrt((destination_light->position[0]-source_transform[0])*(destination_light->position[0]-source_transform[0]) + (destination_light->position[1]-source_transform[1])*(destination_light->position[1]-source_transform[1]) + (destination_light->position[2]-source_transform[2])*(destination_light->position[2]-source_transform[2]));
+	double tri_distance = sphere_distance;
+
+	if (collide_sphere(destination_light->position, &sphere_distance, source_transform))
+		return true;
+	if(collide_triangle(destination_light->position, &tri_distance, source_transform))
+		return true;
+	return false;
+}
+
 
 void cast_ray(int x, int y) {
 	double r, g, b;
 	r = ambient_light[0];
 	g = ambient_light[1];
 	b = ambient_light[2];
+
 	double screen_position[3];
 	convert_world_position(screen_position, x, y);
 
 	double translation [3] = {0.0f, 0.0f, 0.0f};
 
+
+	/*
+	* OOOOOOHHHHHHHHH
+	* I need to check the shadown within the collide sphere loop.... except not :/
+	* Right now it checks to find a hit sphere, returns that sphere, then casts a ray from the center of that sphere (not the hit spot) to the light. If the center of that sphere is in shadow then that sphere is always in shadow
+	* I probably need to return the hit location too from hit_sphere
+	*/
 	double sphere_distance	= 200000000000.f;
 	Sphere *hit_sphere = collide_sphere(screen_position, &sphere_distance, translation);
 
@@ -181,15 +207,19 @@ void cast_ray(int x, int y) {
 	Triangle *hit_triangle = collide_triangle(screen_position, &tri_distance, translation);
 
 	if (sphere_distance<tri_distance && hit_sphere) {
-		//Check shadow ray, change math here also with each light
-		r += hit_sphere->color_diffuse[0];
-		g += hit_sphere->color_diffuse[1];
-		b += hit_sphere->color_diffuse[2];
-		//+=Phong Shade
+		for (int x = 0; x < num_lights; x++ ) {
+			if (!check_in_shadow(hit_sphere->position, &lights[x])) {//If not in shadow
+				r += hit_sphere->color_diffuse[0] * lights[x].color[0];
+				g += hit_sphere->color_diffuse[1] * lights[x].color[1];
+				b += hit_sphere->color_diffuse[2] * lights[x].color[2];
+				//+=Phong Shade
+			}
+		}
 	} else if (hit_triangle) {
-
-	} //else didn't hit 
-
+		//
+	} else {//else didn't hit 
+		r = 1.0f; g = 1.0f; b = 1.0f;
+	}
 
 	plot_pixel(x,y,clamp_convert(r),clamp_convert(g),clamp_convert(b));
 }
