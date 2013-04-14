@@ -76,6 +76,9 @@ int num_triangles=0;
 int num_spheres=0;
 int num_lights=0;
 
+int debug = 0;
+int stop = 229;
+
 double perpixel_width;
 double perpixel_height;
 double screen_left;
@@ -154,15 +157,18 @@ Sphere* collide_sphere(double * direction, double * distance_out, double * trans
 		if (inside >=0) { //Else unreal answer, abort
 			double t0 = (-b + sqrt(inside))/2;
 			double t1 = (-b - sqrt(inside))/2;
-			if (t0 > 0.f && t1 > 0.f) { //Else inside sphere, abort
-				if (t0 < *distance_out) { //If Closer
-					*distance_out = t0;
-					cur_sphere = &spheres[x];
-				}
-				if (t1 < *distance_out) { //If Closerer
-					*distance_out = t0;
-					cur_sphere = &spheres[x];
-				}
+			if (t0>-0.0001f && t0 <= 0.0001f)
+				t0 = 0.0f;
+			if (t1>-0.0001f && t1 < 0.0001f)
+				t1 = 0.0f; 
+			/*Note, if the ray is cast from within the sphere, it will hit that sphere*/
+			if (t0 > 0.f && t0 < *distance_out) { //If Closer
+				*distance_out = t0;
+				cur_sphere = &spheres[x];
+			}
+			if (t1 > 0.f && t1 < *distance_out) { //If Closerer
+				*distance_out = t1;
+				cur_sphere = &spheres[x];
 			}
 		}
 	}
@@ -170,13 +176,13 @@ Sphere* collide_sphere(double * direction, double * distance_out, double * trans
 }
 
 bool check_in_shadow(double * source_transform, Light * destination_light) {
-	//TODO: Check here for colliding with self
-	double sphere_distance = sqrt((destination_light->position[0]-source_transform[0])*(destination_light->position[0]-source_transform[0]) + (destination_light->position[1]-source_transform[1])*(destination_light->position[1]-source_transform[1]) + (destination_light->position[2]-source_transform[2])*(destination_light->position[2]-source_transform[2]));
-	double tri_distance = sphere_distance;
+	/*To make sure that it doesn't collide with anything past the light*/
+	double light_sphere_distance = sqrt((destination_light->position[0]-source_transform[0])*(destination_light->position[0]-source_transform[0]) + (destination_light->position[1]-source_transform[1])*(destination_light->position[1]-source_transform[1]) + (destination_light->position[2]-source_transform[2])*(destination_light->position[2]-source_transform[2]));
+	double light_tri_distance = light_sphere_distance;
 
-	if (collide_sphere(destination_light->position, &sphere_distance, source_transform))
+	if (collide_sphere(destination_light->position, &light_sphere_distance, source_transform))
 		return true;
-	if(collide_triangle(destination_light->position, &tri_distance, source_transform))
+	if(collide_triangle(destination_light->position, &light_tri_distance, source_transform))
 		return true;
 	return false;
 }
@@ -193,27 +199,37 @@ void cast_ray(int x, int y) {
 
 	double translation [3] = {0.0f, 0.0f, 0.0f};
 
-
-	/*
-	* OOOOOOHHHHHHHHH
-	* I need to check the shadown within the collide sphere loop.... except not :/
-	* Right now it checks to find a hit sphere, returns that sphere, then casts a ray from the center of that sphere (not the hit spot) to the light. If the center of that sphere is in shadow then that sphere is always in shadow
-	* I probably need to return the hit location too from hit_sphere
-	*/
 	double sphere_distance	= 200000000000.f;
 	Sphere *hit_sphere = collide_sphere(screen_position, &sphere_distance, translation);
-
 	double tri_distance		= 100000000000.f;
 	Triangle *hit_triangle = collide_triangle(screen_position, &tri_distance, translation);
 
+	/*DEBUG*/
+	/*debug++;
+	if (debug%HEIGHT == stop)
+		debug = debug;
+	if (debug == 29472)
+		debug = debug;*/
+
+	double ray_hit_location[3];
+	double normal_ray[3];
+	normalize3d(screen_position, normal_ray);
 	if (sphere_distance<tri_distance && hit_sphere) {
+		//Convert hit_sphere->position to actual hit location using distance and camera normal
+		ray_hit_location[0] = sphere_distance * normal_ray[0];	
+		ray_hit_location[1] = sphere_distance * normal_ray[1];	
+		ray_hit_location[2] = sphere_distance * normal_ray[2];
 		for (int x = 0; x < num_lights; x++ ) {
-			if (!check_in_shadow(hit_sphere->position, &lights[x])) {//If not in shadow
+			if (!check_in_shadow(ray_hit_location, &lights[x])) {//If not in shadow
 				r += hit_sphere->color_diffuse[0] * lights[x].color[0];
 				g += hit_sphere->color_diffuse[1] * lights[x].color[1];
 				b += hit_sphere->color_diffuse[2] * lights[x].color[2];
 				//+=Phong Shade
 			}
+			/*else { //DEBUG breakpoint
+				int temp = debug%HEIGHT;
+				temp = temp;
+			}*/
 		}
 	} else if (hit_triangle) {
 		//
