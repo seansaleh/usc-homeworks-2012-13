@@ -138,13 +138,13 @@ double dot_product(double *a, double * b) {
 }
 
 /*Assume that return_color has some value */
-void sphere_phong_color(double * hit_location, Light* light, Sphere * sphere, double * return_color) {
+void sphere_phong_color(double * hit_location, double* light_position, double * sphere_position, double * return_color, double * light_color, double * color_diffuse, double *color_specular, double shininess) {
 	double color = 0.0f;
 
 	double normal[3];
-	normal[0] = hit_location[0] - sphere->position[0];
-	normal[1] = hit_location[1] - sphere->position[1];
-	normal[2] = hit_location[2] - sphere->position[2];
+	normal[0] = hit_location[0] - sphere_position[0];
+	normal[1] = hit_location[1] - sphere_position[1];
+	normal[2] = hit_location[2] - sphere_position[2];
 	normalize3d(normal, normal);
 
 	double view_vector[3];
@@ -154,9 +154,9 @@ void sphere_phong_color(double * hit_location, Light* light, Sphere * sphere, do
 	normalize3d(view_vector, view_vector);
 
 	double light_vector[3];
-	light_vector[0] = light->position[0] - hit_location[0];
-	light_vector[1] = light->position[1] - hit_location[1];
-	light_vector[2] = light->position[2] - hit_location[2];
+	light_vector[0] = light_position[0] - hit_location[0];
+	light_vector[1] = light_position[1] - hit_location[1];
+	light_vector[2] = light_position[2] - hit_location[2];
 	normalize3d(light_vector, light_vector);
 
 	double l_dot_n = dot_product(light_vector, normal);
@@ -172,14 +172,67 @@ void sphere_phong_color(double * hit_location, Light* light, Sphere * sphere, do
 	if (r_dot_v < 0.f)
 		r_dot_v = 0.f;
 
-	return_color[0] += light->color[0] * (sphere->color_diffuse[0] * (l_dot_n) + sphere->color_specular[0] * pow(r_dot_v,sphere->shininess));
-	return_color[1] += light->color[1] * (sphere->color_diffuse[1] * (l_dot_n) + sphere->color_specular[1] * pow(r_dot_v,sphere->shininess));
-	return_color[2] += light->color[2] * (sphere->color_diffuse[2] * (l_dot_n) + sphere->color_specular[2] * pow(r_dot_v,sphere->shininess));
+	return_color[0] += light_color[0] * (color_diffuse[0] * (l_dot_n) + color_specular[0] * pow(r_dot_v,shininess));
+	return_color[1] += light_color[1] * (color_diffuse[1] * (l_dot_n) + color_specular[1] * pow(r_dot_v,shininess));
+	return_color[2] += light_color[2] * (color_diffuse[2] * (l_dot_n) + color_specular[2] * pow(r_dot_v,shininess));
 }
 
-Triangle * collide_triangle(double *world_position, double * distance_out, double * translation) {
-	//TODO
-	return NULL;
+void triangle_phong_color(double * hit_location, double* light_position, Triangle * triangle, double * return_color, double * light_color) {
+	double color = 0.0f;
+	/*
+	double normal[3];
+	normal[0] = hit_location[0] - sphere_position[0];
+	normal[1] = hit_location[1] - sphere_position[1];
+	normal[2] = hit_location[2] - sphere_position[2];
+	normalize3d(normal, normal);
+
+	double view_vector[3];
+	view_vector[0] = -hit_location[0];	
+	view_vector[1] = -hit_location[1];	
+	view_vector[2] = -hit_location[2];	
+	normalize3d(view_vector, view_vector);
+
+	double light_vector[3];
+	light_vector[0] = light_position[0] - hit_location[0];
+	light_vector[1] = light_position[1] - hit_location[1];
+	light_vector[2] = light_position[2] - hit_location[2];
+	normalize3d(light_vector, light_vector);
+
+	double l_dot_n = dot_product(light_vector, normal);
+	double reflected_vector[3]; // r = 2 * l_dot_n * n - l
+	reflected_vector[0] =2 * l_dot_n * normal[0] - light_vector[0];
+	reflected_vector[1] =2 * l_dot_n * normal[1] - light_vector[1];
+	reflected_vector[2] =2 * l_dot_n * normal[2] - light_vector[2];
+	normalize3d(reflected_vector, reflected_vector);
+
+	double r_dot_v = dot_product(reflected_vector, view_vector);
+	if (l_dot_n < 0.f)
+		l_dot_n = 0.f;
+	if (r_dot_v < 0.f)
+		r_dot_v = 0.f;
+
+	return_color[0] += light_color[0] * (color_diffuse[0] * (l_dot_n) + color_specular[0] * pow(r_dot_v,shininess));
+	return_color[1] += light_color[1] * (color_diffuse[1] * (l_dot_n) + color_specular[1] * pow(r_dot_v,shininess));
+	return_color[2] += light_color[2] * (color_diffuse[2] * (l_dot_n) + color_specular[2] * pow(r_dot_v,shininess));
+	*/
+}
+
+
+/*TODO*/
+Triangle * collide_triangle(double *direction, double * distance_out, double * translation) {
+	Triangle * cur_triangle = NULL;
+	double normal_ray[3];
+
+	double transformed_direction[3];
+	transformed_direction[0] = direction[0] - translation[0];
+	transformed_direction[1] = direction[1] - translation[1];
+	transformed_direction[2] = direction[2] - translation[2];
+	normalize3d(transformed_direction, normal_ray);
+
+	for(int x = 0; x < num_triangles; x++) {
+		;
+	}
+	return cur_triangle;
 }
 
 Sphere* collide_sphere(double * direction, double * distance_out, double * translation){
@@ -231,7 +284,6 @@ bool check_in_shadow(double * source_transform, Light * destination_light) {
 	return false;
 }
 
-
 void cast_ray(double x, double y, double *color) {
 	color[0] = ambient_light[0];
 	color[1] = ambient_light[1];
@@ -247,13 +299,6 @@ void cast_ray(double x, double y, double *color) {
 	double tri_distance		= 100000000000.f;
 	Triangle *hit_triangle = collide_triangle(screen_position, &tri_distance, translation);
 
-	/*DEBUG*/
-	/*debug++;
-	if (debug%HEIGHT == stop)
-		debug = debug;
-	if (debug == 29472)
-		debug = debug;*/
-
 	double ray_hit_location[3];
 	double normal_ray[3];
 	normalize3d(screen_position, normal_ray);
@@ -264,15 +309,18 @@ void cast_ray(double x, double y, double *color) {
 		ray_hit_location[2] = sphere_distance * normal_ray[2];
 		for (int x = 0; x < num_lights; x++ ) {
 			if (!check_in_shadow(ray_hit_location, &lights[x])) {//If not in shadow
-				sphere_phong_color(ray_hit_location, &lights[x], hit_sphere, color);
+				sphere_phong_color(ray_hit_location, lights[x].position, hit_sphere->position, color, lights[x].color, hit_sphere->color_diffuse, hit_sphere->color_specular, hit_sphere->shininess);
 			}
-			/*else { //DEBUG breakpoint
-				int temp = debug%HEIGHT;
-				temp = temp;
-			}*/
 		}
 	} else if (hit_triangle) {
-		//
+		ray_hit_location[0] = tri_distance * normal_ray[0];	
+		ray_hit_location[1] = tri_distance * normal_ray[1];	
+		ray_hit_location[2] = tri_distance * normal_ray[2];
+		for (int x = 0; x < num_lights; x++ ) {
+			if (!check_in_shadow(ray_hit_location, &lights[x])) {//If not in shadow
+				triangle_phong_color(ray_hit_location, lights[x].position, hit_triangle, color, lights[x].color);
+			}
+		}
 	} else {//else didn't hit 
 		color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
 	}
