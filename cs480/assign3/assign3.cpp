@@ -117,7 +117,7 @@ void set_global_perpixel_distance() {
 	screen_bottom = bottom;
 }
 
-void convert_world_position(double *screen_position, int x, int y) {
+void convert_world_position(double *screen_position, double x, double y) {
 	screen_position[2] = -1.f;
 	screen_position[0] = screen_left + perpixel_width/2 + x*perpixel_width;
 	screen_position[1] = screen_bottom + perpixel_height/2 + y*perpixel_height;
@@ -131,6 +131,50 @@ void normalize3d(double *input, double *output) {
 	output[0] = input[0] / magnitude;
 	output[1] = input[1] / magnitude;
 	output[2] = input[2] / magnitude;
+}
+
+double dot_product(double *a, double * b) {
+		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+/*Assume that return_color has some value */
+void sphere_phong_color(double * hit_location, Light* light, Sphere * sphere, double * return_color) {
+	double color = 0.0f;
+
+	double normal[3];
+	normal[0] = hit_location[0] - sphere->position[0];
+	normal[1] = hit_location[1] - sphere->position[1];
+	normal[2] = hit_location[2] - sphere->position[2];
+	normalize3d(normal, normal);
+
+	double view_vector[3];
+	view_vector[0] = -hit_location[0];	
+	view_vector[1] = -hit_location[1];	
+	view_vector[2] = -hit_location[2];	
+	normalize3d(view_vector, view_vector);
+
+	double light_vector[3];
+	light_vector[0] = light->position[0] - hit_location[0];
+	light_vector[1] = light->position[1] - hit_location[1];
+	light_vector[2] = light->position[2] - hit_location[2];
+	normalize3d(light_vector, light_vector);
+
+	double l_dot_n = dot_product(light_vector, normal);
+	double reflected_vector[3]; // r = 2 * l_dot_n * n - l
+	reflected_vector[0] =2 * l_dot_n * normal[0] - light_vector[0];
+	reflected_vector[1] =2 * l_dot_n * normal[1] - light_vector[1];
+	reflected_vector[2] =2 * l_dot_n * normal[2] - light_vector[2];
+	normalize3d(reflected_vector, reflected_vector);
+
+	double r_dot_v = dot_product(reflected_vector, view_vector);
+	if (l_dot_n < 0.f)
+		l_dot_n = 0.f;
+	if (r_dot_v < 0.f)
+		r_dot_v = 0.f;
+
+	return_color[0] += light->color[0] * (sphere->color_diffuse[0] * (l_dot_n) + sphere->color_specular[0] * pow(r_dot_v,sphere->shininess));
+	return_color[1] += light->color[1] * (sphere->color_diffuse[1] * (l_dot_n) + sphere->color_specular[1] * pow(r_dot_v,sphere->shininess));
+	return_color[2] += light->color[2] * (sphere->color_diffuse[2] * (l_dot_n) + sphere->color_specular[2] * pow(r_dot_v,sphere->shininess));
 }
 
 Triangle * collide_triangle(double *world_position, double * distance_out, double * translation) {
@@ -188,11 +232,10 @@ bool check_in_shadow(double * source_transform, Light * destination_light) {
 }
 
 
-void cast_ray(int x, int y) {
-	double r, g, b;
-	r = ambient_light[0];
-	g = ambient_light[1];
-	b = ambient_light[2];
+void cast_ray(double x, double y, double *color) {
+	color[0] = ambient_light[0];
+	color[1] = ambient_light[1];
+	color[2] = ambient_light[2];
 
 	double screen_position[3];
 	convert_world_position(screen_position, x, y);
@@ -221,10 +264,7 @@ void cast_ray(int x, int y) {
 		ray_hit_location[2] = sphere_distance * normal_ray[2];
 		for (int x = 0; x < num_lights; x++ ) {
 			if (!check_in_shadow(ray_hit_location, &lights[x])) {//If not in shadow
-				r += hit_sphere->color_diffuse[0] * lights[x].color[0];
-				g += hit_sphere->color_diffuse[1] * lights[x].color[1];
-				b += hit_sphere->color_diffuse[2] * lights[x].color[2];
-				//+=Phong Shade
+				sphere_phong_color(ray_hit_location, &lights[x], hit_sphere, color);
 			}
 			/*else { //DEBUG breakpoint
 				int temp = debug%HEIGHT;
@@ -234,12 +274,29 @@ void cast_ray(int x, int y) {
 	} else if (hit_triangle) {
 		//
 	} else {//else didn't hit 
-		r = 1.0f; g = 1.0f; b = 1.0f;
+		color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
 	}
-
-	plot_pixel(x,y,clamp_convert(r),clamp_convert(g),clamp_convert(b));
 }
 
+void cast_aa_ray(int x, int y) {
+
+	/*Yay hand unrolled loops!*/
+	double color1[3];
+	double color2[3];
+	double color3[3];
+	double color4[3];
+	cast_ray(x+.25f, y+.25f, color1);
+	cast_ray(x+.25f, y+.75f, color2);
+	cast_ray(x+.75f, y+.75f, color3);
+	cast_ray(x+.75f, y+.25f, color4);
+
+	double color[3];
+	color[0] = (color1[0]+color2[0]+color3[0]+color4[0]) / 4;
+	color[1] = (color1[1]+color2[1]+color3[1]+color4[1]) / 4;
+	color[2] = (color1[2]+color2[2]+color3[2]+color4[2]) / 4;
+
+	plot_pixel(x,y,clamp_convert(color[0]),clamp_convert(color[1]),clamp_convert(color[2]));
+}
 //MODIFY THIS FUNCTION
 void draw_scene()
 {
@@ -252,7 +309,7 @@ void draw_scene()
     glBegin(GL_POINTS);
     for(y=0;y < HEIGHT;y++)
     {
-		cast_ray(x,y);
+		cast_aa_ray(x,y);
     }
     glEnd();
     glFlush();
