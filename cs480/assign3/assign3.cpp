@@ -149,6 +149,17 @@ void vector3_cross(double *in1, double *in2, double *output) {
 	output[2] = in1[0]*in2[1] - in1[1] * in2[0];
 }
 
+double vector3_tri_area (double *a, double *b, double *c) {
+		//Area is |AxB|
+		//So area_opposite_p0 = |(p2-p1)x(h-p1)|/2
+	//   area_opposite_p1 = |(p0-p2)x(h-p2)|/2
+	//   area_opposite_p2 = |(p1-p0)x(h-p0)|/2
+	//   area_total = |(p1-p0)x(p2-p0)|/2
+
+	double b_a[3];	 vector3_minus(triangle->v[1].position,triangles[x].v[0].position,p1_p0);
+	double c_a[3];	 vector3_minus(triangle->v[2].position,triangles[x].v[0].position,p2_p0);
+}
+
 /*Assume that return_color has some value */
 void sphere_phong_color(double * hit_location, double* light_position, double * sphere_position, double * return_color, double * light_color, double * color_diffuse, double *color_specular, double shininess) {
 	double color = 0.0f;
@@ -201,6 +212,25 @@ void triangle_phong_color(double * hit_location, double* light_position, Triangl
 	double percent_p0 = 1.f/3.f;
 	double percent_p1 = 1.f/3.f;
 	double percent_p2 = 1.f/3.f;
+
+	//Area is |AxB|/2
+	//So area_opposite_p0 = |(p2-p1)x(h-p1)|/2
+	//   area_opposite_p1 = |(p0-p2)x(h-p2)|/2
+	//   area_opposite_p2 = |(p1-p0)x(h-p0)|/2
+	//   area_total = |(p1-p0)x(p2-p0)|/2
+
+	
+	double p1_p0[3];	 vector3_minus(triangle->v[1].position,triangles[x].v[0].position,p1_p0);
+	double p2_p0[3];	 vector3_minus(triangle->v[2].position,triangles[x].v[0].position,p2_p0);
+	double h_p0[3];		 vector3_minus(hit_location,triangles[x].v[0].position,h_p0);
+	double p2_p1[3];	 vector3_minus(triangle->v[2].position,triangles[x].v[1].position,p2_p1);
+	double h_p1[3];		 vector3_minus(hit_location,triangles[x].v[1].position,h_p1);
+	double p0_p2[3];	 vector3_minus(triangle->v[0].position,triangles[x].v[2].position,p0_p2);
+	double h_p2[3];		 vector3_minus(hit_location,triangles[x].v[0].position,p2_p0);
+	//Call area 4 times, then take area / area total
+
+	double temp[3];
+	vector3_cross(p1_p0, p2_p0, temp);
 
 	/*
 	 * None of this will work... think about a right triangle with the point being the cetner of the hypotenous
