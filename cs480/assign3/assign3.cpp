@@ -15,7 +15,7 @@ Name: Sean Saleh
 #include <string>
 
 #include <math.h>
-
+#pragma region one
 #define MAX_TRIANGLES 2000
 #define MAX_SPHERES 10
 #define MAX_LIGHTS 10
@@ -35,9 +35,8 @@ int mode=MODE_DISPLAY;
 #define fov 60.0
 #define M_PI       3.14159265358979323846
 
-
 unsigned char buffer[HEIGHT][WIDTH][3];
-
+#pragma endregion
 struct Vertex
 {
   double position[3];
@@ -51,7 +50,7 @@ typedef struct _Triangle
 {
   struct Vertex v[3];
 } Triangle;
-
+#pragma region Region_Two
 typedef struct _Sphere
 {
   double position[3];
@@ -87,7 +86,7 @@ double screen_bottom;
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
-
+#pragma endregion
 unsigned char clamp_convert(double color) { /*Expects a float for color hopefully between 0 and 1 */
 	if (color > 1.f)
 		color = 1.f;
@@ -137,6 +136,19 @@ double dot_product(double *a, double * b) {
 		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+void vector3_minus (double *a, double *b, double *out) {
+	out[0] = a[0] - b[0];
+	out[1] = a[1] - b[1];
+	out[2] = a[2] - b[2];
+}
+
+/*Returns a cross product from two 3x1 arrays of doubles. Assumes output is initialized*/
+void vector3_cross(double *in1, double *in2, double *output) {
+	output[0] = in1[1]*in2[2] - in2[1] * in1[2];
+	output[1] = in2[0]*in1[2] - in1[0] * in2[2];
+	output[2] = in1[0]*in2[1] - in1[1] * in2[0];
+}
+
 /*Assume that return_color has some value */
 void sphere_phong_color(double * hit_location, double* light_position, double * sphere_position, double * return_color, double * light_color, double * color_diffuse, double *color_specular, double shininess) {
 	double color = 0.0f;
@@ -179,13 +191,28 @@ void sphere_phong_color(double * hit_location, double* light_position, double * 
 
 void triangle_phong_color(double * hit_location, double* light_position, Triangle * triangle, double * return_color, double * light_color) {
 	double color = 0.0f;
-	/*
+	return_color[0] = triangle->v->color_diffuse[0];
+	return_color[1] = triangle->v->color_diffuse[1];
+	return_color[2] = triangle->v->color_diffuse[2];
+	
 	double normal[3];
-	normal[0] = hit_location[0] - sphere_position[0];
-	normal[1] = hit_location[1] - sphere_position[1];
-	normal[2] = hit_location[2] - sphere_position[2];
-	normalize3d(normal, normal);
+	//Normal is (I think... this makes sense to me!)
+	//magnitude = |hit-p0| + |hit-p1| + |hit-p2|
+	//normal is normalized( |hit-p0|/magnitude * p0.normal + |hit-p1|/magnitude * p1.normal + |hit-p2|/magnitude * p2.normal )
+	double hit_p1[3];	 vector3_minus(hit_location, triangle->v[0].position, hit_p1);
+	double hit_p2[3];	 vector3_minus(hit_location, triangle->v[1].position, hit_p2);
+	double hit_p3[3];	 vector3_minus(hit_location, triangle->v[2].position, hit_p3);
 
+	double mag_hit_p1 = sqrt(hit_p1[0]*hit_p1[0] + hit_p1[1]*hit_p1[1] + hit_p1[2]*hit_p1[2]);
+	double mag_hit_p2 = sqrt(hit_p2[0]*hit_p2[0] + hit_p2[1]*hit_p2[1] + hit_p2[2]*hit_p2[2]);
+	double mag_hit_p3 = sqrt(hit_p3[0]*hit_p3[0] + hit_p3[1]*hit_p3[1] + hit_p3[2]*hit_p3[2]);
+	double magnitude = sqrt(mag_hit_p1*mag_hit_p1 + mag_hit_p2*mag_hit_p2 + mag_hit_p3*mag_hit_p3);
+
+	double p1_p0[3];	 vector3_minus(triangle->v[1].position,triangle->v[0].position,p1_p0);
+	double p2_p0[3];	 vector3_minus(triangle->v[2].position,triangle->v[0].position,p2_p0);
+	vector3_cross(p1_p0, p2_p0, normal);
+	normalize3d(normal, normal);	
+	
 	double view_vector[3];
 	view_vector[0] = -hit_location[0];	
 	view_vector[1] = -hit_location[1];	
@@ -197,26 +224,25 @@ void triangle_phong_color(double * hit_location, double* light_position, Triangl
 	light_vector[1] = light_position[1] - hit_location[1];
 	light_vector[2] = light_position[2] - hit_location[2];
 	normalize3d(light_vector, light_vector);
-
+	
 	double l_dot_n = dot_product(light_vector, normal);
 	double reflected_vector[3]; // r = 2 * l_dot_n * n - l
 	reflected_vector[0] =2 * l_dot_n * normal[0] - light_vector[0];
 	reflected_vector[1] =2 * l_dot_n * normal[1] - light_vector[1];
 	reflected_vector[2] =2 * l_dot_n * normal[2] - light_vector[2];
 	normalize3d(reflected_vector, reflected_vector);
-
+	
 	double r_dot_v = dot_product(reflected_vector, view_vector);
 	if (l_dot_n < 0.f)
 		l_dot_n = 0.f;
 	if (r_dot_v < 0.f)
 		r_dot_v = 0.f;
-
+	/*
 	return_color[0] += light_color[0] * (color_diffuse[0] * (l_dot_n) + color_specular[0] * pow(r_dot_v,shininess));
 	return_color[1] += light_color[1] * (color_diffuse[1] * (l_dot_n) + color_specular[1] * pow(r_dot_v,shininess));
 	return_color[2] += light_color[2] * (color_diffuse[2] * (l_dot_n) + color_specular[2] * pow(r_dot_v,shininess));
 	*/
 }
-
 
 /*TODO*/
 Triangle * collide_triangle(double *direction, double * distance_out, double * translation) {
@@ -227,10 +253,56 @@ Triangle * collide_triangle(double *direction, double * distance_out, double * t
 	transformed_direction[0] = direction[0] - translation[0];
 	transformed_direction[1] = direction[1] - translation[1];
 	transformed_direction[2] = direction[2] - translation[2];
-	normalize3d(transformed_direction, normal_ray);
+	normalize3d(transformed_direction, transformed_direction);
 
 	for(int x = 0; x < num_triangles; x++) {
-		;
+		//Get intersection point with polygon
+		//t = -(o-p)_dot_n/n_dot_d
+		//n_dot_d == 0
+		double n[3];
+		double p1_p0[3];	 vector3_minus(triangles[x].v[1].position,triangles[x].v[0].position,p1_p0);
+		double p2_p0[3];	 vector3_minus(triangles[x].v[2].position,triangles[x].v[0].position,p2_p0);
+		vector3_cross(p1_p0, p2_p0, n);
+		normalize3d(n, n);
+		double n_dot_d = dot_product(n,transformed_direction);
+		if (!(n_dot_d < 0.000001f && n_dot_d > 0.000001f)) { //If n_dot_p is zero, then this triangle is parallel to ray
+			double origin_minus_p[3]; //Check here if erroring, it could be the other way around?
+			origin_minus_p[0] = translation[0] - triangles[x].v[0].position[0];
+			origin_minus_p[1] = translation[1] - triangles[x].v[0].position[1];
+			origin_minus_p[2] = translation[2] - triangles[x].v[0].position[2];
+			double o_minus_p_dot_n = dot_product(origin_minus_p, n);
+			double t = - o_minus_p_dot_n/n_dot_d;
+			if (t>-.0000001f && t < .0000001f)
+				t = 0.f;
+			if (t>0.f) { //If the hit location is in front of us
+				double hit[3];
+				hit[0] = translation[0] + t * transformed_direction[0];
+				hit[1] = translation[1] + t * transformed_direction[1];
+				hit[2] = translation[2] + t * transformed_direction[2];
+				/* From math for checking if triangles are to the left of the lines so it is on the plane
+				(p1-p0)cross(hit-p0)dot n>=0
+				(p2-p1)cross(hit-p1)dot n>=0
+				(p0-p2)cross(hit-p2)dot n>=0
+				*/
+				/*This is already defined above *///double p1_p0[3];	 vector3_minus(triangles[x].v[1].position,triangles[x].v[0].position,p1_p0);
+				double p2_p1[3];	 vector3_minus(triangles[x].v[2].position,triangles[x].v[1].position,p2_p1);
+				double p0_p2[3];	 vector3_minus(triangles[x].v[0].position,triangles[x].v[2].position,p0_p2);
+				double hit_p1[3];	 vector3_minus(hit, triangles[x].v[0].position, hit_p1);
+				double hit_p2[3];	 vector3_minus(hit, triangles[x].v[1].position, hit_p2);
+				double hit_p3[3];	 vector3_minus(hit, triangles[x].v[2].position, hit_p3);
+				 
+				double cross_1[3];	 vector3_cross(p1_p0,hit_p1,cross_1);
+				double cross_2[3];	 vector3_cross(p2_p1,hit_p2,cross_2);
+				double cross_3[3];	 vector3_cross(p0_p2,hit_p3,cross_3);
+
+				if (dot_product(cross_1, n) >=0.0f && dot_product(cross_2, n) >=0.0f && dot_product(cross_3, n) >=0.0f) {
+					if (t<*distance_out) {
+						*distance_out = t;
+						cur_triangle = &triangles[x];
+					}
+				}
+			}
+		}
 	}
 	return cur_triangle;
 }
@@ -325,7 +397,7 @@ void cast_ray(double x, double y, double *color) {
 		color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
 	}
 }
-
+#pragma region prewritten
 void cast_aa_ray(int x, int y) {
 
 	/*Yay hand unrolled loops!*/
@@ -333,10 +405,10 @@ void cast_aa_ray(int x, int y) {
 	double color2[3];
 	double color3[3];
 	double color4[3];
-	cast_ray(x+.25f, y+.25f, color1);
-	cast_ray(x+.25f, y+.75f, color2);
-	cast_ray(x+.75f, y+.75f, color3);
-	cast_ray(x+.75f, y+.25f, color4);
+	cast_ray(x+.25f, y+.5f, color1);
+	cast_ray(x+.5f, y+.75f, color2);
+	cast_ray(x+.5f, y+.25f, color3);
+	cast_ray(x+.75f, y+.5f, color4);
 
 	double color[3];
 	color[0] = (color1[0]+color2[0]+color3[0]+color4[0]) / 4;
@@ -345,7 +417,6 @@ void cast_aa_ray(int x, int y) {
 
 	plot_pixel(x,y,clamp_convert(color[0]),clamp_convert(color[1]),clamp_convert(color[2]));
 }
-//MODIFY THIS FUNCTION
 void draw_scene()
 {
   set_global_perpixel_distance();
@@ -364,27 +435,23 @@ void draw_scene()
   }
   printf("Done!\n"); fflush(stdout);
 }
-
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b)
 {
   glColor3f(((double)r)/256.f,((double)g)/256.f,((double)b)/256.f);
   glVertex2i(x,y);
 }
-
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b)
 {
   buffer[HEIGHT-y-1][x][0]=r;
   buffer[HEIGHT-y-1][x][1]=g;
   buffer[HEIGHT-y-1][x][2]=b;
 }
-
 void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
 {
   plot_pixel_display(x,y,r,g,b);
   if(mode == MODE_JPEG)
       plot_pixel_jpeg(x,y,r,g,b);
 }
-
 void save_jpg()
 {
   Pic *in = NULL;
@@ -401,7 +468,6 @@ void save_jpg()
   pic_free(in);      
 
 }
-
 void parse_check(char *expected,char *found)
 {
   if(stricmp(expected,found))
@@ -413,7 +479,6 @@ void parse_check(char *expected,char *found)
     }
 
 }
-
 void parse_doubles(FILE*file, char *check, double p[3])
 {
   char str[100];
@@ -422,7 +487,6 @@ void parse_doubles(FILE*file, char *check, double p[3])
   fscanf(file,"%lf %lf %lf",&p[0],&p[1],&p[2]);
   printf("%s %lf %lf %lf\n",check,p[0],p[1],p[2]);
 }
-
 void parse_rad(FILE*file,double *r)
 {
   char str[100];
@@ -431,7 +495,6 @@ void parse_rad(FILE*file,double *r)
   fscanf(file,"%lf",r);
   printf("rad: %f\n",*r);
 }
-
 void parse_shi(FILE*file,double *shi)
 {
   char s[100];
@@ -440,7 +503,6 @@ void parse_shi(FILE*file,double *shi)
   fscanf(file,"%lf",shi);
   printf("shi: %f\n",*shi);
 }
-
 int loadScene(char *argv)
 {
   FILE *file = fopen(argv,"r");
@@ -521,12 +583,10 @@ int loadScene(char *argv)
     }
   return 0;
 }
-
 void display()
 {
 
 }
-
 void init()
 {
   glMatrixMode(GL_PROJECTION);
@@ -537,7 +597,6 @@ void init()
   glClearColor(0,0,0,0);
   glClear(GL_COLOR_BUFFER_BIT);
 }
-
 void idle()
 {
   //hack to make it only draw once
@@ -550,7 +609,6 @@ void idle()
     }
   once=1;
 }
-
 int main (int argc, char ** argv)
 {
   if (argc<2 || argc > 3)
@@ -578,3 +636,4 @@ int main (int argc, char ** argv)
   init();
   glutMainLoop();
 }
+#pragma endregion
