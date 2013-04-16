@@ -191,14 +191,24 @@ void sphere_phong_color(double * hit_location, double* light_position, double * 
 
 void triangle_phong_color(double * hit_location, double* light_position, Triangle * triangle, double * return_color, double * light_color) {
 	double color = 0.0f;
-	return_color[0] = triangle->v->color_diffuse[0];
-	return_color[1] = triangle->v->color_diffuse[1];
-	return_color[2] = triangle->v->color_diffuse[2];
+
+	double color_diffuse[3];
+	double color_specular[3];
+	double shininess;
 	
 	double normal[3];
+
+	double percent_p0 = 1.f/3.f;
+	double percent_p1 = 1.f/3.f;
+	double percent_p2 = 1.f/3.f;
+
+	/*
+	 * None of this will work... think about a right triangle with the point being the cetner of the hypotenous
+	 *
 	//Normal is (I think... this makes sense to me!)
 	//magnitude = |hit-p0| + |hit-p1| + |hit-p2|
 	//normal is normalized( |hit-p0|/magnitude * p0.normal + |hit-p1|/magnitude * p1.normal + |hit-p2|/magnitude * p2.normal )
+	//normal is normalized( magnitude - |hit-p0| * p0.normal
 	double hit_p1[3];	 vector3_minus(hit_location, triangle->v[0].position, hit_p1);
 	double hit_p2[3];	 vector3_minus(hit_location, triangle->v[1].position, hit_p2);
 	double hit_p3[3];	 vector3_minus(hit_location, triangle->v[2].position, hit_p3);
@@ -207,12 +217,25 @@ void triangle_phong_color(double * hit_location, double* light_position, Triangl
 	double mag_hit_p2 = sqrt(hit_p2[0]*hit_p2[0] + hit_p2[1]*hit_p2[1] + hit_p2[2]*hit_p2[2]);
 	double mag_hit_p3 = sqrt(hit_p3[0]*hit_p3[0] + hit_p3[1]*hit_p3[1] + hit_p3[2]*hit_p3[2]);
 	double magnitude = sqrt(mag_hit_p1*mag_hit_p1 + mag_hit_p2*mag_hit_p2 + mag_hit_p3*mag_hit_p3);
+	*/
+	normal[0] = percent_p0 * triangle->v[0].normal[0] + percent_p1 * triangle->v[1].normal[0] + percent_p2 * triangle->v[2].normal[0];
+	normal[1] = percent_p0 * triangle->v[0].normal[1] + percent_p1 * triangle->v[1].normal[1] + percent_p2 * triangle->v[2].normal[1];
+	normal[2] = percent_p0 * triangle->v[0].normal[2] + percent_p1 * triangle->v[1].normal[2] + percent_p2 * triangle->v[2].normal[2];
 
-	double p1_p0[3];	 vector3_minus(triangle->v[1].position,triangle->v[0].position,p1_p0);
-	double p2_p0[3];	 vector3_minus(triangle->v[2].position,triangle->v[0].position,p2_p0);
-	vector3_cross(p1_p0, p2_p0, normal);
-	normalize3d(normal, normal);	
-	
+	normalize3d(normal, normal);
+
+	//Now to adjust colors based on the same distances...
+	//The same math should work
+	color_diffuse[0] = percent_p0 * triangle->v[0].color_diffuse[0] + percent_p1 * triangle->v[1].color_diffuse[0] + percent_p2 * triangle->v[2].color_diffuse[0];
+	color_diffuse[1] = percent_p0 * triangle->v[0].color_diffuse[1] + percent_p1 * triangle->v[1].color_diffuse[1] + percent_p2 * triangle->v[2].color_diffuse[1];
+	color_diffuse[2] = percent_p0 * triangle->v[0].color_diffuse[2] + percent_p1 * triangle->v[1].color_diffuse[2] + percent_p2 * triangle->v[2].color_diffuse[2];
+
+	color_specular[0] = percent_p0 * triangle->v[0].color_specular[0] + percent_p1 * triangle->v[1].color_specular[0] +percent_p2 * triangle->v[2].color_specular[0];
+	color_specular[1] = percent_p0 * triangle->v[0].color_specular[1] + percent_p1 * triangle->v[1].color_specular[1] +percent_p2 * triangle->v[2].color_specular[1];
+	color_specular[2] = percent_p0 * triangle->v[0].color_specular[2] + percent_p1 * triangle->v[1].color_specular[2] +percent_p2 * triangle->v[2].color_specular[2];
+
+	shininess = percent_p0 * triangle->v[0].shininess + percent_p1 * triangle->v[1].shininess + percent_p2 * triangle->v[2].shininess;
+
 	double view_vector[3];
 	view_vector[0] = -hit_location[0];	
 	view_vector[1] = -hit_location[1];	
@@ -237,11 +260,11 @@ void triangle_phong_color(double * hit_location, double* light_position, Triangl
 		l_dot_n = 0.f;
 	if (r_dot_v < 0.f)
 		r_dot_v = 0.f;
-	/*
+	
 	return_color[0] += light_color[0] * (color_diffuse[0] * (l_dot_n) + color_specular[0] * pow(r_dot_v,shininess));
 	return_color[1] += light_color[1] * (color_diffuse[1] * (l_dot_n) + color_specular[1] * pow(r_dot_v,shininess));
 	return_color[2] += light_color[2] * (color_diffuse[2] * (l_dot_n) + color_specular[2] * pow(r_dot_v,shininess));
-	*/
+	
 }
 
 /*TODO*/
