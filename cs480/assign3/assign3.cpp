@@ -205,6 +205,8 @@ void triangle_phong_color(double * hit_location, double* light_position, Triangl
 	/*
 	 * None of this will work... think about a right triangle with the point being the cetner of the hypotenous
 	 *
+	 * CORRECT math is to do the area% opposite the vertex is how much of that vertex is used
+	 *
 	//Normal is (I think... this makes sense to me!)
 	//magnitude = |hit-p0| + |hit-p1| + |hit-p2|
 	//normal is normalized( |hit-p0|/magnitude * p0.normal + |hit-p1|/magnitude * p1.normal + |hit-p2|/magnitude * p2.normal )
