@@ -436,7 +436,6 @@ void cast_ray(double x, double y, double *color) {
 		color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
 	}
 }
-#pragma region prewritten
 void cast_aa_ray(int x, int y) {
 
 	/*Yay hand unrolled loops!*/
@@ -498,7 +497,7 @@ void draw_scene()
 }
 
 void render_scene() {
-#pragma omp for nowait schedule(dynamic,4)
+#pragma omp for nowait schedule(dynamic,20)
 	for(int x=0; x<WIDTH; x++)
 	  {
 		for(int y=0;y < HEIGHT;y++)
@@ -713,14 +712,16 @@ int main (int argc, char ** argv)
   glutDisplayFunc(display);
   glutIdleFunc(idle);
   init();
-  //render_scene();
+
+  //For faster rusults, without live preview uncomment the next two lines and comment out the next block instead
+  /*
+  render_scene();
+  glutMainLoop();
+  */
   /*Sawn work threads*/
 #pragma omp parallel 
   if(omp_get_thread_num()==0)
 	glutMainLoop();
   else
    render_scene();
-   
-  //glutMainLoop();
 }
-#pragma endregion
