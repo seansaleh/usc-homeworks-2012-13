@@ -15,6 +15,8 @@ Feature:                                 Status: finish? (yes/no)
 5) Shadows rays                                     yes
 6) Still images                                     yes
    
+See the SIGGRAPH_with_spheres.scene file for an example of features. Note: if you run it with and without the /openmp compiler switch you can see the rendering speed difference
+
 7) Extra Credit (up to 20 points)  
 
 A) Anti-aliasing:	The images are antialiased: each pixel asts 4 rays and averages the output from them
@@ -26,3 +28,4 @@ B) Multi-threaded:	The application is multi-theaded. Since this is fundamentally
 							The number of threads used should be (number of threads available on system) - 1 (for displaying the preview)
 							Timing wise it is more efficient than non multi-threaded. However, some efficieny is lost through the live preview. If you want faster results change 
 	Run instructions:	Compile with OpenMP enabled. Visual Studio compiler switch: /openmp
+				If you compile without OpenMP the code will still work and will ru na single threaded version
