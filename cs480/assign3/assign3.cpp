@@ -15,6 +15,14 @@ Name: Sean Saleh
 #include <string>
 
 #include <math.h>
+#ifdef _OPENMP
+   #include <omp.h>
+   #define OMP_ENABLED 1
+#else
+   #define omp_get_thread_num() 0
+   #define OMP_ENABLED 0
+#endif
+
 #pragma region one
 #define MAX_TRIANGLES 2000
 #define MAX_SPHERES 10
@@ -30,6 +38,7 @@ int mode=MODE_DISPLAY;
 //you may want to make these smaller for debugging purposes
 #define WIDTH 640
 #define HEIGHT 480
+int printCounter = 0;
 
 //the field of view of the camera
 #define fov 60.0
@@ -445,26 +454,60 @@ void cast_aa_ray(int x, int y) {
 	color[1] = (color1[1]+color2[1]+color3[1]+color4[1]) / 4;
 	color[2] = (color1[2]+color2[2]+color3[2]+color4[2]) / 4;
 
+
 	plot_pixel(x,y,clamp_convert(color[0]),clamp_convert(color[1]),clamp_convert(color[2]));
+
 }
+
 void draw_scene()
-{
-  set_global_perpixel_distance();
-  unsigned int x,y;
-  //simple output
-  for(x=0; x<WIDTH; x++)
-  {
-    glPointSize(2.0);  
-    glBegin(GL_POINTS);
-    for(y=0;y < HEIGHT;y++)
-    {
-		cast_aa_ray(x,y);
-    }
-    glEnd();
-    glFlush();
-  }
-  printf("Done!\n"); fflush(stdout);
+{  
+	// in double buffer mode so we swap to avoid a flicker
+	glutSwapBuffers();
+	if (OMP_ENABLED) {
+	//glClear(GL_COLOR_BUFFER_BIT);
+		printCounter++;
+		if (printCounter >2000) {
+			printCounter = 0;
+			 //glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+			for(int x=0; x<WIDTH; x++) {
+				glPointSize(2.0);  
+				glBegin(GL_POINTS);
+				for(int y=0;y < HEIGHT;y++)
+				{
+					plot_pixel_display(x,y,buffer[HEIGHT-y-1][x][0],buffer[HEIGHT-y-1][x][1],buffer[HEIGHT-y-1][x][2]);
+				}
+				glEnd();
+				glFlush();
+			}
+		}
+	}
+	else {
+	  for(int x=0; x<WIDTH; x++) {
+		glPointSize(2.0);  
+		glBegin(GL_POINTS);
+		for(int y=0;y < HEIGHT;y++)
+		{
+			cast_aa_ray(x,y);
+			plot_pixel_display(x,y,buffer[HEIGHT-y-1][x][0],buffer[HEIGHT-y-1][x][1],buffer[HEIGHT-y-1][x][2]);
+		}
+		glEnd();
+		glFlush();
+	  }
+	}
+  //printf("Done!\n"); fflush(stdout);
 }
+
+void render_scene() {
+#pragma omp for nowait schedule(dynamic,4)
+	for(int x=0; x<WIDTH; x++)
+	  {
+		for(int y=0;y < HEIGHT;y++)
+		{
+			cast_aa_ray(x,y);
+		}
+	  }
+}
+
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b)
 {
   glColor3f(((double)r)/256.f,((double)g)/256.f,((double)b)/256.f);
@@ -478,8 +521,9 @@ void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b
 }
 void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
 {
-  plot_pixel_display(x,y,r,g,b);
-  if(mode == MODE_JPEG)
+  //For parellel we just print from buffer
+  //plot_pixel_display(x,y,r,g,b);
+ // if(mode == MODE_JPEG)
       plot_pixel_jpeg(x,y,r,g,b);
 }
 void save_jpg()
@@ -626,14 +670,19 @@ void init()
 
   glClearColor(0,0,0,0);
   glClear(GL_COLOR_BUFFER_BIT);
+
+  set_global_perpixel_distance();
 }
 void idle()
 {
-  //hack to make it only draw once
+	if(OMP_ENABLED)
+		draw_scene();
+	//hack to make it only draw once
   static int once=0;
   if(!once)
   {
-      draw_scene();
+	  if (!OMP_ENABLED)
+		  draw_scene();
       if(mode == MODE_JPEG)
 		save_jpg();
     }
@@ -664,6 +713,14 @@ int main (int argc, char ** argv)
   glutDisplayFunc(display);
   glutIdleFunc(idle);
   init();
-  glutMainLoop();
+  //render_scene();
+  /*Sawn work threads*/
+#pragma omp parallel 
+  if(omp_get_thread_num()==0)
+	glutMainLoop();
+  else
+   render_scene();
+   
+  //glutMainLoop();
 }
 #pragma endregion
