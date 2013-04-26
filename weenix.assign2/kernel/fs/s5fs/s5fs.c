@@ -44,6 +44,7 @@ static void s5fs_read_vnode(vnode_t *vnode);
 static void s5fs_delete_vnode(vnode_t *vnode);
 static int  s5fs_query_vnode(vnode_t *vnode);
 static int  s5fs_umount(fs_t *fs);
+static int  s5fs_free_blocks(fs_t *fs);
 
 /* vnode_t entry points: */
 static int  s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len);
@@ -265,6 +266,8 @@ s5fs_umount(fs_t *fs)
         vnode_flush_all(fs);
 
         vput(fs->fs_root);
+	dbg(DBG_PRINT, "s5fs_umount: Free data blocks %d\n", 
+		s5fs_free_blocks(fs));
 
         if (0 > (ret = pframe_get(S5FS_TO_VMOBJ(s5), S5_SUPER_BLOCK, &sbp))) {
                 panic("s5fs_umount: failed to pframe_get super block. "
@@ -646,4 +649,30 @@ s5fs_check_refcounts(fs_t *fs)
 
         kfree(refcounts);
         return ret;
+}
+/* Count free blocks in the system */
+int
+s5fs_free_blocks(fs_t *fs) {
+    s5fs_t *s5fs = FS_TO_S5FS(fs);
+    mmobj_t *disk = S5FS_TO_VMOBJ(s5fs);
+    s5_super_t *su = s5fs->s5f_super;
+    pframe_t *pf = NULL;
+    uint32_t *freel = NULL;
+    int tot = 0;
+
+    kmutex_lock(&s5fs->s5f_mutex);
+    tot = su->s5s_nfree;
+    freel = su->s5s_free_blocks;
+    if ( freel[S5_NBLKS_PER_FNODE-1] !=  ~0u) tot += 1;
+    while ( freel[S5_NBLKS_PER_FNODE-1] !=  ~0u) {
+	tot += S5_NBLKS_PER_FNODE;
+	pframe_get(disk, freel[S5_NBLKS_PER_FNODE-1], &pf);
+	KASSERT(pf);
+	freel = pf->pf_addr;
+	dbg(DBG_S5FS, "next pointer %x\n", freel[S5_NBLKS_PER_FNODE-1]);
+	/* Subtract out the last null */
+	if ( !freel[S5_NBLKS_PER_FNODE-1]!= ~0) tot--;
+    }
+    kmutex_unlock(&s5fs->s5f_mutex);
+    return tot;
 }

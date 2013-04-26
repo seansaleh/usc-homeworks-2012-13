@@ -17,4 +17,9 @@ KSHELL_CMD(link);
 KSHELL_CMD(rmdir);
 KSHELL_CMD(mkdir);
 KSHELL_CMD(stat);
+KSHELL_CMD(sparse_test);
+KSHELL_CMD(space_test);
+KSHELL_CMD(thread_test);
+KSHELL_CMD(directory_test);
+KSHELL_CMD(cleardir);
 #endif

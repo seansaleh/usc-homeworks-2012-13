@@ -44,11 +44,20 @@ static __attribute__((unused)) void kshell_init()
                            "call the link function to create a link to a file");
         kshell_add_command("rmdir", kshell_rmdir,
                            "remove empty directories");
+        kshell_add_command("cleardir", kshell_cleardir,
+                           "remove files (not dirs) from directory");
         kshell_add_command("mkdir", kshell_mkdir, "make directories");
         kshell_add_command("stat", kshell_stat, "display file status");
+        kshell_add_command("sparse_test", kshell_sparse_test, "tests sparse");
+        kshell_add_command("space_test", kshell_space_test, "tests space");
+        kshell_add_command("thread_test", kshell_thread_test, 
+		"tests multiple threads");
+        kshell_add_command("directory_test", kshell_directory_test, 
+		"tests directory contention");
+	kshell_add_command("exit", kshell_exit, "exits the shell");
 #endif
 
-        kshell_add_command("exit", kshell_exit, "exits the shell");
+
 }
 init_func(kshell_init);
 

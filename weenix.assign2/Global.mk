@@ -5,7 +5,7 @@ PYTHON    := python
 CSCOPE    := cscope
 
 CFLAGS    += -fno-builtin -nostdinc -ansi -g3 -fno-stack-protector -m32 -march=i686 -fsigned-char -Iinclude
-CFLAGS    += -Wall -Wredundant-decls -Wundef -Wpointer-arith -Wfloat-equal -Wnested-externs -Wvla -Winline -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
+CFLAGS    += -Wall -Wredundant-decls -Wundef -Wpointer-arith -Wfloat-equal -Wnested-externs -Wvla -Winline -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-attributes
 ASFLAGS   := -D__ASSEMBLY__
 
 ###
