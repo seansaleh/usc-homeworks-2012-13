@@ -263,6 +263,7 @@ pframe_alloc(mmobj_t *o, uint32_t pagenum)
 static int
 pframe_fill(pframe_t *pf)
 {
+	NOT_YET_IMPLEMENTED("pframe_fill? according to slides....");
         int ret;
 
         pframe_set_busy(pf);
@@ -297,8 +298,43 @@ pframe_fill(pframe_t *pf)
 int
 pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 {
-        NOT_YET_IMPLEMENTED("S5FS: pframe_get");
-        return 0;
+
+	pframe_t *pf;
+	while (pf = pframe_get_resident(o, pagenum)) {
+		if (pframe_is_busy(pf)) {
+			/*Wait on the queue*/
+			sched_sleep_on(&pf->pf_waitq);
+		}
+		else { /*This pf really does exists and is not busy*/
+			*result = pf;
+			return 0;
+		}
+	}
+	KASSERT(pf == NULL); /*Make sure that pf does not exist*/
+	
+   /*
+	* we allocate a new page and fill it (in which
+	* case this routine may block). After allocating the new pframe, we check to
+	* see if we need to call pageoutd and wake it up if necessary.
+	*/
+	
+	while (!(pf = pframe_alloc(o, pagenum))) {
+		while (pageoutd_needed()) {
+			pageoutd_wakeup();
+			sched_sleep_on(&alloc_waitq);
+		}
+	}
+	KASSERT(pf != NULL);
+	
+	pframe_fill(pf);
+	
+	while (pageoutd_needed()) {
+		pageoutd_wakeup();
+		sched_sleep_on(&alloc_waitq);
+	}
+	
+	*result = pf;
+    return 0;
 }
 
 int
@@ -357,7 +393,13 @@ pframe_migrate(pframe_t *pf, mmobj_t *dest)
 void
 pframe_pin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("S5FS: pframe_pin");
+	if (pf->pf_pincount <1) {
+		list_remove(&pf->pf_link);
+		nallocated--;
+		list_insert_tail(&pinned_list, &pf->pf_link);
+		npinned++;
+	}
+	pf->pf_pincount++;
 }
 
 /*
@@ -373,7 +415,13 @@ pframe_pin(pframe_t *pf)
 void
 pframe_unpin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("S5FS: pframe_unpin");
+	pf->pf_pincount--;
+	if (pf->pf_pincount <1) {
+		list_remove(&pf->pf_link);
+		npinned--;
+		list_insert_tail(&alloc_list, &pf->pf_link);
+		nallocated++;
+	}
 }
 
 /*
