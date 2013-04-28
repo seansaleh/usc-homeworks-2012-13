@@ -209,7 +209,51 @@ s5fs_mount(struct fs *fs)
 static void
 s5fs_read_vnode(vnode_t *vnode)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_read_vnode");
+	pframe_t *pf;
+	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
+	s5_inode_t *inode = (s5_inode_t *)(pf->pf_addr) + S5_INODE_OFFSET(S5_INODE_BLOCK(vnode->vn_vno));
+	
+	vnode->vn_i = inode;
+	vnode->vn_len = inode->s5_size;
+	
+	/*When this function returns, the inode link count should be incremented.*/
+	inode->s5_linkcount++;
+	
+	switch (inode->s5_type) { /*switch adapted from ramfs.c*/
+		case S5_TYPE_FREE:
+			vnode->vn_ops = NULL;
+			/*vnode->vn_mode*/
+			panic("Is vnode what its supposed to be?  For S5_TYPE_FREE (Not properly implemented yet)");
+			break;
+		case S5_TYPE_DATA:
+			vnode->vn_ops = &s5fs_file_vops;
+			vnode->vn_mode = S_IFREG;
+			break;
+		case S5_TYPE_DIR:
+			vnode->vn_ops = &s5fs_dir_vops;
+			vnode->vn_mode = S_IFDIR;
+			break;
+		case S5_TYPE_CHR:
+			vnode->vn_ops = NULL;
+			vnode->vn_mode = S_IFCHR;
+			vnode->vn_devid = inode->s5_indirect_block;
+			/*Check faber's comments on the forum */
+			panic("Is vnode->devid what its supposed to be? For S5_TYPE_CHR (Not properly implemented yet)");
+			break;
+		case S5_TYPE_BLK:
+			vnode->vn_ops = NULL;
+			vnode->vn_mode = S_IFBLK;
+			vnode->vn_devid = inode->s5_indirect_block;
+			/*Check faber's comments on the forum */
+			panic("Is vnode->devid what its supposed to be? For S5_TYPE_BLK (Not properly implemented yet)");
+			break;
+		default:
+			 panic("inode %d has unknown/invalid type %d!!\n",
+                              (int)vnode->vn_vno, (int)inode->s5_type);
+	}
+
+	/*Don't forget to pin the pf.*/
+	pframe_pin(pf);
 }
 
 /*
