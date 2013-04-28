@@ -210,8 +210,14 @@ static void
 s5fs_read_vnode(vnode_t *vnode)
 {
 	pframe_t *pf;
+
 	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
-	s5_inode_t *inode = (s5_inode_t *)(pf->pf_addr) + S5_INODE_OFFSET(S5_INODE_BLOCK(vnode->vn_vno));
+	
+	/*Don't forget to pin the pf.*/
+	pframe_pin(pf);
+	
+	/*Remove S5_INODE_BLOCK*/
+	s5_inode_t *inode = (s5_inode_t *)(pf->pf_addr) + S5_INODE_OFFSET(vnode->vn_vno);
 	
 	vnode->vn_i = inode;
 	vnode->vn_len = inode->s5_size;
@@ -251,9 +257,7 @@ s5fs_read_vnode(vnode_t *vnode)
 			 panic("inode %d has unknown/invalid type %d!!\n",
                               (int)vnode->vn_vno, (int)inode->s5_type);
 	}
-
-	/*Don't forget to pin the pf.*/
-	pframe_pin(pf);
+	
 }
 
 /*
@@ -364,16 +368,18 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_read");
-        return -1;
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_read");
+	return s5_read_file(vnode, offset, buf, len);
+    return -1;
 }
 
 /* Simply call s5_write_file. */
 static int
 s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_write");
-        return -1;
+    NOT_YET_IMPLEMENTED("S5FS: s5fs_write");
+	return s5_write_file(vnode, offset, buf, len);
+    return -1;
 }
 
 /* This function is deceptivly simple, just return the vnode's
@@ -430,7 +436,13 @@ int
 s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 {
         NOT_YET_IMPLEMENTED("S5FS: s5fs_lookup");
-        return -1;
+		int ret = s5_find_dirent(base, name, namelen);
+		if (ret < 0)
+			return ret;
+		else {
+			*result = vget(base->vn_fs, ret);
+			return 0;
+		}
 }
 
 /*
@@ -444,8 +456,8 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_link");
-        return -1;
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_link");
+	return s5_link(dir, src, name, namelen);  
 }
 
 /*
@@ -459,8 +471,8 @@ s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_unlink");
-        return -1;
+    NOT_YET_IMPLEMENTED("S5FS: s5fs_unlink");
+	return s5_remove_dirent(dir, name, namelen);
 }
 
 /*
@@ -484,8 +496,20 @@ s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_mkdir");
-        return -1;
+	/*Inspired by ramfs_mkdir.c*/
+	vnode_t *vn;
+	s5_dirent_t *dirent;
+	
+	/*Ensure this does not already exist*/
+	KASSERT(0 != s5fs_lookup(dir, name, namelen, &vn));
+	
+	/*
+	...
+	*/
+
+	
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_mkdir");
+	return -1;
 }
 
 /*
@@ -549,6 +573,8 @@ static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
         NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage");
+		/*Need s5_seek_to_block first, so just calling it*/
+		s5_seek_to_block(vnode, offset, 1);
         return -1;
 }
 

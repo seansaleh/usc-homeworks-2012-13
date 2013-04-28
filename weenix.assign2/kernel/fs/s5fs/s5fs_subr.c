@@ -63,6 +63,14 @@ static int s5_alloc_block(s5fs_t *);
 int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
+	pframe_t *pf;
+	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
+	pframe_pin(pf);
+	
+	/*If used?*/
+	pframe_dirty(pf);
+	
+	pframe_unpin(pf);
         NOT_YET_IMPLEMENTED("S5FS: s5_seek_to_block");
         return -1;
 }
@@ -137,6 +145,9 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {
+	pframe_t *pf;
+	/*Need to get fillpage done first, so just calling it*/
+	pframe_get(&vnode->vn_mmobj, S5_INODE_BLOCK(vnode->vn_vno), &pf);
         NOT_YET_IMPLEMENTED("S5FS: s5_read_file");
         return -1;
 }
@@ -359,8 +370,34 @@ s5_free_inode(vnode_t *vnode)
 int
 s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_find_dirent");
-        return -1;
+	NOT_YET_IMPLEMENTED("S5FS: s5_find_dirent");
+	struct s5_dirent_t *d;
+	off_t offset = 0;
+	/*Need to do reed_file first, so just making it get called*/
+	s5_read_file(vnode, offset, d, sizeof(s5_dirent_t));
+	/*
+	for (offset = 0; i <  
+		offset += s5_read_file(vnode, offset, d, sizeof(dirent_t));
+	*/
+	/* search through directory, see if name is the same, then return if so*/
+	
+	return -1;
+		/* From ramfs_lookup
+		
+		               off_t i;
+        ramfs_inode_t *inode = VNODE_TO_RAMFSINODE(dir);
+        ramfs_dirent_t *entry = (ramfs_dirent_t *)inode->rf_mem;
+
+        for (i = 0; i < RAMFS_MAX_DIRENT; i++, entry++) {
+                if (name_match(entry->rd_name, name, namelen)) {
+                        *result = vget(dir->vn_fs, entry->rd_ino);
+                        return 0;
+                }
+        }
+		
+		*/
+		
+		
 }
 
 /*
@@ -404,6 +441,7 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 int
 s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 {
+	/* Look at ramfs_link*/
         NOT_YET_IMPLEMENTED("S5FS: s5_link");
         return -1;
 }
