@@ -562,19 +562,28 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
         return -1;
 }
 
-
 /*
- * See the comment in vnode.h for what is expected of this function.
- *
+ * Read the page of 'vnode' containing 'offset' into the
+ * page-aligned and page-sized buffer pointed to by
+ * 'pagebuf'.
+ */
+/*
  * You'll probably want to use s5_seek_to_block and the device's
  * read_block function.
  */
 static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
+
         NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage");
 		/*Need s5_seek_to_block first, so just calling it*/
 		s5_seek_to_block(vnode, offset, 1);
+		
+		/*
+		blockdev_t *bd = CONTAINER_OF(pf->pf_obj, blockdev_t, bd_mmobj);
+        * And fill in the page by reading from it *
+        return bd->bd_ops->read_block(bd, pf->pf_addr, pf->pf_pagenum, 1);*/
+		
         return -1;
 }
 

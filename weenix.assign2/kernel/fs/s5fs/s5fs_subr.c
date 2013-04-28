@@ -63,6 +63,8 @@ static int s5_alloc_block(s5fs_t *);
 int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
+        NOT_YET_IMPLEMENTED("S5FS: s5_seek_to_block");
+        return -1;
 	pframe_t *pf;
 	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
 	pframe_pin(pf);
@@ -71,8 +73,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 	pframe_dirty(pf);
 	
 	pframe_unpin(pf);
-        NOT_YET_IMPLEMENTED("S5FS: s5_seek_to_block");
-        return -1;
+
 }
 
 
