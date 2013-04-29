@@ -63,7 +63,7 @@ static int s5_alloc_block(s5fs_t *);
 int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_seek_to_block");
+        NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
 
 	if (seekptr == 0)
 		panic("seekptr in seek to block is zero, doe this means its sparse?");
@@ -160,12 +160,11 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 
 	/* While we only support small files */
 	KASSERT(inode->s5_size<=S5_BLOCK_SIZE);
-	/* This is for large files
-	ret = MAX(0, MIN((off_t)len, inode->s5_size - seek));
-	*/
+
+	int ret = MAX(0, MIN((off_t)len, inode->s5_size - S5_DATA_OFFSET(seek)));
 		
-	memcpy(dest, pf->pf_addr + seek, inode->s5_size-seek);
-	return MAX(0,inode->s5_size-seek);
+	memcpy(dest, pf->pf_addr + S5_DATA_OFFSET(seek), ret);
+	return ret;
 }
 
 /*
