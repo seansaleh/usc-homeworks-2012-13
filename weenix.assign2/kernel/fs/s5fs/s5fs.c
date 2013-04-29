@@ -435,7 +435,7 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 int
 s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_lookup");
+        NOT_YET_IMPLEMENTED("? S5FS: s5fs_lookup");
 		int ret = s5_find_dirent(base, name, namelen);
 		if (ret < 0)
 			return ret;
@@ -574,17 +574,19 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
-
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage");
 		/*Need s5_seek_to_block first, so just calling it*/
-		s5_seek_to_block(vnode, offset, 1);
 		
-		/*
-		blockdev_t *bd = CONTAINER_OF(pf->pf_obj, blockdev_t, bd_mmobj);
-        * And fill in the page by reading from it *
-        return bd->bd_ops->read_block(bd, pf->pf_addr, pf->pf_pagenum, 1);*/
-		
-        return -1;
+		int blocknum = s5_seek_to_block(vnode, offset, 1);
+		if (blocknum == 0) {
+		    NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage for sparse");
+			/*Fll with zeros*/
+			return 0;
+		}
+		else {
+			blockdev_t *bd = FS_TO_S5FS(vnode->vn_fs)->s5f_bdev;
+			/*blocknum the block number to start reading at*/
+			return bd->bd_ops->read_block(bd, pagebuf, blocknum, PAGE_SIZE);
+		}	
 }
 
 

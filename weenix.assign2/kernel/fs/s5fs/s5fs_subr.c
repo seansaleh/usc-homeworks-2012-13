@@ -64,7 +64,12 @@ int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
         NOT_YET_IMPLEMENTED("S5FS: s5_seek_to_block");
-        return -1;
+
+	if (seekptr == 0)
+		panic("seekptr in seek to block is zero, doe this means its sparse?");
+	return S5_DATA_BLOCK(seekptr);
+	
+	
 	pframe_t *pf;
 	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
 	pframe_pin(pf);
@@ -146,11 +151,21 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {
+	NOT_YET_IMPLEMENTED("? S5FS: s5_read_file");
 	pframe_t *pf;
-	/*Need to get fillpage done first, so just calling it*/
-	pframe_get(&vnode->vn_mmobj, S5_INODE_BLOCK(vnode->vn_vno), &pf);
-        NOT_YET_IMPLEMENTED("S5FS: s5_read_file");
-        return -1;
+	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+	
+	uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
+	pframe_get(&vnode->vn_mmobj, pagenum, &pf);
+
+	/* While we only support small files */
+	KASSERT(inode->s5_size<=S5_BLOCK_SIZE);
+	/* This is for large files
+	ret = MAX(0, MIN((off_t)len, inode->s5_size - seek));
+	*/
+		
+	memcpy(dest, pf->pf_addr + seek, inode->s5_size-seek);
+	return MAX(0,inode->s5_size-seek);
 }
 
 /*
@@ -371,34 +386,14 @@ s5_free_inode(vnode_t *vnode)
 int
 s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-	NOT_YET_IMPLEMENTED("S5FS: s5_find_dirent");
-	struct s5_dirent_t *d;
+	s5_dirent_t *d;
 	off_t offset = 0;
-	/*Need to do reed_file first, so just making it get called*/
-	s5_read_file(vnode, offset, d, sizeof(s5_dirent_t));
-	/*
-	for (offset = 0; i <  
-		offset += s5_read_file(vnode, offset, d, sizeof(dirent_t));
-	*/
-	/* search through directory, see if name is the same, then return if so*/
-	
-	return -1;
-		/* From ramfs_lookup
-		
-		               off_t i;
-        ramfs_inode_t *inode = VNODE_TO_RAMFSINODE(dir);
-        ramfs_dirent_t *entry = (ramfs_dirent_t *)inode->rf_mem;
-
-        for (i = 0; i < RAMFS_MAX_DIRENT; i++, entry++) {
-                if (name_match(entry->rd_name, name, namelen)) {
-                        *result = vget(dir->vn_fs, entry->rd_ino);
-                        return 0;
-                }
-        }
-		
-		*/
-		
-		
+	while (0 != s5_read_file(vnode, offset, d, sizeof(s5_dirent_t))) {
+		offset += sizeof(s5_dirent_t);
+		if (name_match(d->s5d_name, name, namelen))
+			return d->s5d_inode;
+	}
+	return -ENOENT;
 }
 
 /*
