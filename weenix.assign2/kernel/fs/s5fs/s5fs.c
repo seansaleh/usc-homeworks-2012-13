@@ -423,8 +423,33 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t devid)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_mknod");
-        return -1;
+/*Alloc an inode
+Link it into its directory
+vget to get the vnode from the alloced inode
+vput just do it?
+*/
+	vnode_t *child;
+
+	/*Ensure this does not already exist*/
+	KASSERT(0 != s5fs_lookup(dir, name, namelen, &child));
+	
+	int type;
+	if (mode == S_IFBLK)
+		type = S5_TYPE_BLK;
+	else if (mode == S_IFCHR)
+		type = S5_TYPE_CHR;
+	else
+		panic("Unknown type being called into mknode: %n \n", mode);
+	int inode = s5_alloc_inode(dir->vn_fs, type, devid);
+	KASSERT(inode);
+	
+	child = vget(dir->vn_fs, inode);
+	s5_link(dir, child, name, namelen);
+	
+	vput(dir);
+	
+        NOT_YET_IMPLEMENTED("? S5FS: s5fs_mknod");
+        return 0;
 }
 
 /*
@@ -490,6 +515,9 @@ s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
  * link.
  *
  * You probably want to use s5_alloc_inode, and s5_link().
+ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
+ s5_alloc_inode(fs_t *fs, uint16_t type, devid_t devid)
+
  *
  * Assert, a lot.
  */
@@ -498,18 +526,25 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 {
 	/*Inspired by ramfs_mkdir.c*/
 	vnode_t *vn;
-	s5_dirent_t *dirent;
+/*	s5_dirent_t *dirent;*/
 	
 	/*Ensure this does not already exist*/
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &vn));
 	
-	/*
-	...
-	*/
-
+	int inode = s5_alloc_inode(dir->vn_fs, S5_TYPE_DIR, 0);
+	KASSERT(inode);
 	
-	NOT_YET_IMPLEMENTED("S5FS: s5fs_mkdir");
-	return -1;
+	vnode_t *child = vget(dir->vn_fs, inode);
+	
+	s5_link(dir, child, name, namelen);
+	s5_link(child,child, ".", 1);
+	s5_link(child, dir, "..", 2);
+	
+	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
+	
+	NOT_YET_IMPLEMENTED("? S5FS: s5fs_mkdir");
+	panic("The directory was never actually made!");
+	return 0;
 }
 
 /*

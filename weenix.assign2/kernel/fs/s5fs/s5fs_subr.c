@@ -65,8 +65,6 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
         NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
 
-	if (seekptr == 0)
-		panic("seekptr in seek to block is zero, doe this means its sparse?");
 	return S5_DATA_BLOCK(seekptr);
 	
 	
@@ -120,12 +118,30 @@ unlock_s5(s5fs_t *fs)
  * call to s5_seek_to_block().
  *
  * You will need pframe_dirty(), pframe_get(), memcpy().
+ pframe_dirty(pframe_t *pf)
+ pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
+ memcpy(dest, pf->pf_addr + S5_DATA_OFFSET(seek), ret);
+ 
  */
 int
 s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_write_file");
-        return -1;
+	pframe_t *pf;
+	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+		
+	uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
+	pframe_get(&vnode->vn_mmobj, pagenum, &pf);
+	
+	/*KASSERT not writing past  the end of a block, not supported yet*/
+	KASSERT(len+S5_DATA_OFFSET(seek)<S5_BLOCK_SIZE);
+
+	/*This is if we don't have neough space to write and only write partial, not done yet*/
+/*int ret = MAX(0, MIN((off_t)len, inode->s5_size + S5_DATA_OFFSET(seek)));*/
+	
+	memcpy(pf->pf_addr + S5_DATA_OFFSET(seek), bytes, len);
+	
+        NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
+        return len;
 }
 
 /*
@@ -389,6 +405,7 @@ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 	off_t offset = 0;
 	while (0 != s5_read_file(vnode, offset, d, sizeof(s5_dirent_t))) {
 		offset += sizeof(s5_dirent_t);
+		dbg_print("Directory Name: %s \n",d->s5d_name);
 		if (name_match(d->s5d_name, name, namelen))
 			return d->s5d_inode;
 	}
@@ -432,13 +449,31 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
  * Remember to incrament the ref counts appropriately
  *
  * You probably want to use s5_find_dirent(), s5_write_file(), and s5_dirty_inode().
+ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
+ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
+ s5_dirty_inode(fs, inode) 
+
+ 
  */
 int
 s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 {
-	/* Look at ramfs_link*/
-        NOT_YET_IMPLEMENTED("S5FS: s5_link");
-        return -1;
+	/*Make sure this link doesn't exist */
+	KASSERT(0>=s5_find_dirent(parent, name, namelen));
+	
+	
+	s5_dirent_t entry;
+	entry.s5d_inode = VNODE_TO_S5INODE(child);
+	strncpy(&entry.s5d_name, name, MIN(namelen, S5_NAME_LEN - 1));
+	
+	int written_amount = s5_write_file(parent, VNODE_TO_S5INODE(parent)->s5_size, &entry, sizeof(s5_dirent_t));
+	KASSERT(written_amount == sizeof(s5_dirent_t));
+	
+	VNODE_TO_S5INODE(parent)->s5_linkcount++;
+	
+	s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));
+	NOT_YET_IMPLEMENTED("? S5FS: s5_link");
+	return 0;
 }
 
 /*
