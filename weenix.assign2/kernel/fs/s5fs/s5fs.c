@@ -243,15 +243,11 @@ s5fs_read_vnode(vnode_t *vnode)
 			vnode->vn_ops = NULL;
 			vnode->vn_mode = S_IFCHR;
 			vnode->vn_devid = inode->s5_indirect_block;
-			/*Check faber's comments on the forum */
-			panic("Is vnode->devid what its supposed to be? For S5_TYPE_CHR (Not properly implemented yet)");
 			break;
 		case S5_TYPE_BLK:
 			vnode->vn_ops = NULL;
 			vnode->vn_mode = S_IFBLK;
 			vnode->vn_devid = inode->s5_indirect_block;
-			/*Check faber's comments on the forum */
-			panic("Is vnode->devid what its supposed to be? For S5_TYPE_BLK (Not properly implemented yet)");
 			break;
 		default:
 			 panic("inode %d has unknown/invalid type %d!!\n",
@@ -446,7 +442,8 @@ vput just do it?
 	child = vget(dir->vn_fs, inode);
 	s5_link(dir, child, name, namelen);
 	
-	vput(dir);
+	/*TODO is this wrong?*/
+	vput(child);
 	
         NOT_YET_IMPLEMENTED("? S5FS: s5fs_mknod");
         return 0;
@@ -540,10 +537,14 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	s5_link(child,child, ".", 1);
 	s5_link(child, dir, "..", 2);
 	
+	/*Dirty inde*/
+	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
+	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
+	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
 	
 	NOT_YET_IMPLEMENTED("? S5FS: s5fs_mkdir");
-	panic("The directory was never actually made!");
+	/*panic("The directory was never actually made!");*/
 	return 0;
 }
 

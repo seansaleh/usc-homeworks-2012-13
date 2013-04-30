@@ -401,13 +401,14 @@ s5_free_inode(vnode_t *vnode)
 int
 s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-	s5_dirent_t *d;
+	/*Make an actual dirent*/
+	s5_dirent_t d;
 	off_t offset = 0;
-	while (0 != s5_read_file(vnode, offset, d, sizeof(s5_dirent_t))) {
+	while (0 != s5_read_file(vnode, offset, &d, sizeof(s5_dirent_t))) {
 		offset += sizeof(s5_dirent_t);
-		dbg_print("Directory Name: %s \n",d->s5d_name);
-		if (name_match(d->s5d_name, name, namelen))
-			return d->s5d_inode;
+		dbg_print("Directory Name: %s \n",d.s5d_name);
+		if (name_match(d.s5d_name, name, namelen))
+			return d.s5d_inode;
 	}
 	return -ENOENT;
 }
@@ -463,11 +464,16 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	
 	
 	s5_dirent_t entry;
-	entry.s5d_inode = VNODE_TO_S5INODE(child);
+	entry.s5d_inode = VNODE_TO_S5INODE(child)->s5_number;
 	strncpy(&entry.s5d_name, name, MIN(namelen, S5_NAME_LEN - 1));
+	entry.s5d_name[MIN(namelen, S5_NAME_LEN - 1)] = '\0';
 	
 	int written_amount = s5_write_file(parent, VNODE_TO_S5INODE(parent)->s5_size, &entry, sizeof(s5_dirent_t));
 	KASSERT(written_amount == sizeof(s5_dirent_t));
+	/*TODO*/
+	/*Adjust file size in vnode and inode*/
+	parent->vn_len+=written_amount;
+	VNODE_TO_S5INODE(parent)->s5_size+=written_amount;
 	
 	VNODE_TO_S5INODE(parent)->s5_linkcount++;
 	
