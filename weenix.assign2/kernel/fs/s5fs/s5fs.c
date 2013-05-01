@@ -636,9 +636,11 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 			return 0;
 		}
 		else {
-			blockdev_t *bd = FS_TO_S5FS(vnode->vn_fs)->s5f_bdev;
-			/*blocknum the block number to start reading at*/
-			return bd->bd_ops->read_block(bd, pagebuf, blocknum, PAGE_SIZE);
+			/*blockdev_t *bd = FS_TO_S5FS(vnode->vn_fs)->s5f_bdev;*/
+			blockdev_t *bd = VNODE_TO_S5FS(vnode)->s5f_bdev;
+			/*blocknum the block number to start reading at 
+			the last argument is not PAGE_SIZE but rather number of blocks?*/
+			return bd->bd_ops->read_block(bd, pagebuf, blocknum, 1);
 		}	
 }
 

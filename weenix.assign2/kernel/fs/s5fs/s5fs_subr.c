@@ -64,7 +64,7 @@ int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
         NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
-
+/*Note, sometime seeptr is really large, when called by s5_fillpage...*/
 	return S5_DATA_BLOCK(seekptr);
 	
 	
@@ -175,6 +175,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	
 	uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
+	/*pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), pagenum, &pf);*/
 	pframe_get(&vnode->vn_mmobj, pagenum, &pf);
 
 	/* While we only support small files */
