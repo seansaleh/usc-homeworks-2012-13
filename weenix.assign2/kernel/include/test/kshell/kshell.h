@@ -4,6 +4,8 @@
 
 typedef struct kshell kshell_t;
 typedef int (*kshell_cmd_func_t)(kshell_t *, int argc, char **argv);
+int kshell_test(kshell_t *ksh,char *command);
+
 
 /**
  * Adds a command to the global command table for kernel shells.

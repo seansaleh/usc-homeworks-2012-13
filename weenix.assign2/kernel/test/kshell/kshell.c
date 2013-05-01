@@ -441,3 +441,18 @@ done:
 #endif
         return nbytes;
 }
+
+int kshell_test(kshell_t *ksh,char *command)
+{
+  char *args[10];
+  int argc = 0;
+  kshell_get_args(ksh, command, args, KSH_MAX_ARGS, &argc);
+  kshell_command_t *cmd;
+  if ((cmd = kshell_lookup_command(args[0], strlen(args[0]))) == NULL) {
+    kprintf(ksh, "kshell: %s not a valid command\n", args[0]);
+    return -1;
+  } else {
+    return cmd->kc_cmd_func(ksh, argc, args);
+  }
+}
+

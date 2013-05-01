@@ -364,7 +364,7 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-	NOT_YET_IMPLEMENTED("S5FS: s5fs_read");
+	NOT_YET_IMPLEMENTED("? S5FS: s5fs_read");
 	return s5_read_file(vnode, offset, buf, len);
     return -1;
 }
@@ -577,8 +577,14 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 static int
 s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_readdir");
-        return -1;
+	s5_dirent_t s5_dir;
+	int ret = s5_read_file(vnode, offset, &s5_dir, sizeof(s5_dirent_t));
+	
+	d->d_ino = s5_dir.s5d_inode;
+	strncpy(d->d_name, s5_dir.s5d_name, S5_NAME_LEN);
+	s5_dir.s5d_name[S5_NAME_LEN - 1] = '\0';
+	
+	return ret;	
 }
 
 
@@ -594,8 +600,19 @@ s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 static int
 s5fs_stat(vnode_t *vnode, struct stat *ss)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_stat");
-        return -1;
+	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+	/*memset(ss, 0, sizeof(struct stat*/
+	
+	/*Otherwise use macros*/
+	ss->st_mode		= vnode->vn_mode;
+	
+	ss->st_ino		= vnode->vn_vno;
+	ss->st_nlink	= inode->s5_linkcount - 1; /*-1 since ramfs does it!*/
+	ss->st_size		= inode->s5_size;
+	ss->st_blksize	= S5_BLOCK_SIZE;
+	ss->st_blocks	= (inode->s5_size / S5_BLOCK_SIZE) + 1;
+        NOT_YET_IMPLEMENTED("? S5FS: s5fs_stat");
+        return 0;
 }
 
 /*

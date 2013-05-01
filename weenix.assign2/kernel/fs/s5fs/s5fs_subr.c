@@ -140,6 +140,9 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	
 	memcpy(pf->pf_addr + S5_DATA_OFFSET(seek), bytes, len);
 	
+	vnode->vn_len+=len;
+	VNODE_TO_S5INODE(vnode)->s5_size+=len;
+	
         NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
         return len;
 }
@@ -471,9 +474,9 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	int written_amount = s5_write_file(parent, VNODE_TO_S5INODE(parent)->s5_size, &entry, sizeof(s5_dirent_t));
 	KASSERT(written_amount == sizeof(s5_dirent_t));
 	/*TODO*/
-	/*Adjust file size in vnode and inode*/
-	parent->vn_len+=written_amount;
-	VNODE_TO_S5INODE(parent)->s5_size+=written_amount;
+	/*Adjust file size in vnode and inode, but do it in write instead?*/
+	/*parent->vn_len+=written_amount;
+	VNODE_TO_S5INODE(parent)->s5_size+=written_amount;*/
 	
 	VNODE_TO_S5INODE(parent)->s5_linkcount++;
 	
