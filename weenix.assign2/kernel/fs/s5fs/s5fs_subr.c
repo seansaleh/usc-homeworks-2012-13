@@ -65,7 +65,8 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
         NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
 /*Note, sometime seeptr is really large, when called by s5_fillpage...*/
-	return S5_DATA_BLOCK(seekptr);
+	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+	return inode->s5_direct_blocks[seekptr];
 	
 	
 	pframe_t *pf;
@@ -129,8 +130,13 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 		
-	uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
-	pframe_get(&vnode->vn_mmobj, pagenum, &pf);
+	/*uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
+	pframe_get(&vnode->vn_mmobj, pagenum, &pf);*/
+	
+	uint32_t data_block_num = S5_DATA_BLOCK(seek);
+	
+	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
+
 	
 	/*KASSERT not writing past  the end of a block, not supported yet*/
 	KASSERT(len+S5_DATA_OFFSET(seek)<S5_BLOCK_SIZE);
@@ -174,12 +180,15 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	
-	uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
-	/*pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), pagenum, &pf);*/
-	pframe_get(&vnode->vn_mmobj, pagenum, &pf);
+	uint32_t pagenum;
+	off_t curpos = 0;
+	
+	uint32_t data_block_num = S5_DATA_BLOCK(seek);
+	
+	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
 
 	/* While we only support small files */
-	KASSERT(inode->s5_size<=S5_BLOCK_SIZE);
+	KASSERT(S5_DATA_OFFSET(seek) + len <= S5_BLOCK_SIZE);
 
 	int ret = MAX(0, MIN((off_t)len, inode->s5_size - S5_DATA_OFFSET(seek)));
 		

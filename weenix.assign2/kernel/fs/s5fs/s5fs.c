@@ -627,8 +627,6 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
-		/*Need s5_seek_to_block first, so just calling it*/
-		
 		int blocknum = s5_seek_to_block(vnode, offset, 1);
 		if (blocknum == 0) {
 		    NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage for sparse");

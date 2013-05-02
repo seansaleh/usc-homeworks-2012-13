@@ -30,7 +30,7 @@
 #
 # If you change this value make clean and make
 
-	GDBWAIT=0
+	GDBWAIT=1
 
 #
 # Set the number of terminals that we should be launching.

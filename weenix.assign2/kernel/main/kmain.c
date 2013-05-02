@@ -364,11 +364,11 @@ initproc_run(int arg1, void *arg2)
 		
 		char cmd[100];
 		strcpy(cmd, "ls");
-		
+		/*
 		while(1) {
 			kshell_test(kshell,cmd);	
 		}
-		
+		*/
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);
 #endif
