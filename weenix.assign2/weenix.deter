@@ -8,6 +8,7 @@ USAGE="Usage: $0 [OPTION]...
 -d --debug <arg>     Run with debugging support. 'gdb' is the only
                      valid argument.
 -n --new-disk        Use a fresh copy of the hard disk image.
+-s --sleep <arg>     Wait <arg> seconds before starting gdb
 "
 
 # XXX hardcoding these temporarily -- should be read from the makefiles
@@ -27,13 +28,14 @@ if ! which $QEMU; then
 	fi
 fi
 GDB=gdb
-GDB_PORT=1234
+GDB_PORT=`id -u`
 GDB_TERM=xterm
 MEMORY=32
+GDB_SLEEP=5
 
 cd $(dirname $0)
 
-TEMP=$(getopt -o hm:d:n --long help,machine:,debug:,new-disk -n "$0" -- "$@")
+TEMP=$(getopt -o hm:d:ns: --long help,machine:,debug:,new-disk,sleep: -n "$0" -- "$@")
 if [ $? != 0 ] ; then
 	exit 2
 fi
@@ -48,6 +50,7 @@ while true ; do
 		-n|--new-disk) newdisk=1 ; shift ;;
 		-m|--machine) machine="$2" ; shift 2 ;;
 		-d|--debug) dbgmode="$2" ; shift 2 ;;
+		-s|--sleep) GDB_SLEEP="$2" ; shift 2 ;;
 		--) shift ; break ;;
 		*) echo "Argument error." >&2 ; exit 2 ;;
 	esac
@@ -73,15 +76,15 @@ case $machine in
 
 		case $dbgmode in
 			run)
-				$QEMU -m "$MEMORY" -cdrom "$KERN_DIR/$ISO_IMAGE" disk0.img -serial stdio
+				$QEMU -m "$MEMORY" -cdrom "$KERN_DIR/$ISO_IMAGE" -hda disk0.img -serial stdio
 				;;
 			gdb)
 				# Build the gdb initialization script
 				echo "target remote localhost:$GDB_PORT" > $GDB_TMP_INIT
 				echo "python sys.path.append(\"$(pwd)\")" >> $GDB_TMP_INIT
 
-				$GDB_TERM -e $QEMU -m "$MEMORY" -cdrom "$KERN_DIR/$ISO_IMAGE" disk0.img -serial stdio -s &
-				sleep 5
+				$GDB_TERM -e $QEMU -m "$MEMORY" -cdrom "$KERN_DIR/$ISO_IMAGE" disk0.img -serial stdio -gdb tcp::$GDB_PORT &
+				sleep $GDB_SLEEP
 				$GDB $GDB_FLAGS
 				;;
 			*)

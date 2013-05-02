@@ -30,7 +30,7 @@
 #
 # If you change this value make clean and make
 
-	GDBWAIT=1
+	GDBWAIT=0
 
 #
 # Set the number of terminals that we should be launching.
@@ -81,7 +81,7 @@
 
 # terminal binary to use when opening a second terminal for gdb
         GDB_TERM=xterm
-		GDB_PORT=1234
+		GDB_PORT=5484
 
 # The amount of physical memory which will be available to Weenix (in megabytes)
 # XXX MEMORY=32 is hardcoded in ./weenix right now -- this line here is
