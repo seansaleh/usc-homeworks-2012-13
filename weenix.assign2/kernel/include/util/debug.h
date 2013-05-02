@@ -184,7 +184,7 @@ void dbg_add_modes(const char *modes);
 #define dbg_add_mode(mode)
 #define dbg_add_modes(modes)
 #endif
-
+void break_point();
 void dbg_panic(const char *file, int line, const char *func, const char *fmt, ...) __attribute__((format(printf, 4, 5)));
 #define panic(fmt, args...) dbg_panic(__FILE__, __LINE__, __func__, (fmt), ## args)
 

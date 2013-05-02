@@ -49,6 +49,10 @@ void dbg_init()
         dbg_add_modes(QUOTE(__DBG__));
 }
 
+void break_point() {
+return;
+}
+
 static dbg_mode_t dbg_tab[] = {
         DBG_TAB
 };

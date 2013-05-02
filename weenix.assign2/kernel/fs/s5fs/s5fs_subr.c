@@ -66,14 +66,30 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 	/*seekptr is a number such as 0,1,2,3,4,5,6,7,8,9,10,etc. It comes from S5_DATA_BLOCK(seek), 
 	so it refers to s5_inode.s5_direct_blocks[seekptr], unless it is indirect block... 
 			then it is the thing in the indirect block*/
-        NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
-		
+	NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
+	
+	uint32_t ret; 
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	
-	KASSERT(seekptr<S5_NDIRECT_BLOCKS);
+	if (seekptr<S5_NDIRECT_BLOCKS) { /*Direct Block*/
+		ret = inode->s5_direct_blocks[seekptr];
+	}
+	else { /*Indirect block*/
+		break_point();
+		pframe_t *pf;
+		pframe_get(&vnode->vn_mmobj, inode->s5_indirect_block, &pf);
+		
+		/*Make sure we don't try to get more blocks than is possible*/
+		KASSERT(seekptr-S5_NDIRECT_BLOCKS < S5_NDIRECT_BLOCKS);
+		
+		ret = ((uint32_t *)(pf->pf_addr))[seekptr-S5_NDIRECT_BLOCKS];
+	}
 	
-	return inode->s5_direct_blocks[seekptr];
+	if (ret == 0) { /*Sparse Block*/
+		break_point();/*Sparse Block, what does i do?!?!?!?*/
+	}
 	
+	return ret;
 	
 	pframe_t *pf;
 	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
