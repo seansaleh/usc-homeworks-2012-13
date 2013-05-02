@@ -63,9 +63,15 @@ static int s5_alloc_block(s5fs_t *);
 int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
+	/*seekptr is a number such as 0,1,2,3,4,5,6,7,8,9,10,etc. It comes from S5_DATA_BLOCK(seek), 
+	so it refers to s5_inode.s5_direct_blocks[seekptr], unless it is indirect block... 
+			then it is the thing in the indirect block*/
         NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
-/*Note, sometime seeptr is really large, when called by s5_fillpage...*/
+		
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+	
+	KASSERT(seekptr<S5_NDIRECT_BLOCKS);
+	
 	return inode->s5_direct_blocks[seekptr];
 	
 	
@@ -190,7 +196,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	/* While we only support small files */
 	KASSERT(S5_DATA_OFFSET(seek) + len <= S5_BLOCK_SIZE);
 
-	int ret = MAX(0, MIN((off_t)len, inode->s5_size - S5_DATA_OFFSET(seek)));
+	int ret = MAX(0, MIN((off_t)len, inode->s5_size - seek));
 		
 	memcpy(dest, pf->pf_addr + S5_DATA_OFFSET(seek), ret);
 	return ret;

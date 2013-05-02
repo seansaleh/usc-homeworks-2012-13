@@ -627,6 +627,11 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
+	/* If I get and offset not 0, it should be small. 
+	 * S5_seek_to_block assumes the offset is the block number in its 
+	 * s5_direct_blocks or s5_indirect_block entries
+	 */
+	KASSERT(offset == 0);
 		int blocknum = s5_seek_to_block(vnode, offset, 1);
 		if (blocknum == 0) {
 		    NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage for sparse");
