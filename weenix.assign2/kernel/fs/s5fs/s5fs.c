@@ -403,10 +403,6 @@ static int
 s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_create");
-	vnode_t *vn;
-	off_t i;
-	ramfs_dirent_t *entry;
-
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &vn));
 	
 	int inode = s5_alloc_inode(dir->vn_fs, S5_TYPE_DATA, 0);
@@ -419,7 +415,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
 	/* KASSERT  inode refcount of the file should be 2
 	 * and the vnode refcount should be 1.*/
-	KASSERT(child->vn_refcount == 1 && VNODE_TO_S5INODE(child)->s5_linkcount == 2;
+	KASSERT(child->vn_refcount == 1 && VNODE_TO_S5INODE(child)->s5_linkcount == 2);
 
 	return inode;
 }
