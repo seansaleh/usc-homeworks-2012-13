@@ -375,7 +375,6 @@ s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
     NOT_YET_IMPLEMENTED("S5FS: s5fs_write");
 	return s5_write_file(vnode, offset, buf, len);
-    return -1;
 }
 
 /* This function is deceptivly simple, just return the vnode's
