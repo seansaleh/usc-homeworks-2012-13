@@ -403,10 +403,11 @@ static int
 s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_create");
+	vnode_t *child;
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &vn));
 	
 	int inode = s5_alloc_inode(dir->vn_fs, S5_TYPE_DATA, 0);
-	vnode_t *child = vget(dir->vn_fs, inode);
+	child = vget(dir->vn_fs, inode);
 	
 	s5_link(dir, child, name, namelen);
 	
