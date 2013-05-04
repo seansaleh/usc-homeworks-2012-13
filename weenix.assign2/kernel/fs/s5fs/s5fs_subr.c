@@ -504,7 +504,8 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	
 	VNODE_TO_S5INODE(parent)->s5_linkcount++;
 	
-	s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));
+	/*Don't dirty yet*/
+	/*s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));*/
 	NOT_YET_IMPLEMENTED("? S5FS: s5_link");
 	return 0;
 }

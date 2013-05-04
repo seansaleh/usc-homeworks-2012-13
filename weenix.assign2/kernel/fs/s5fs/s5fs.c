@@ -267,8 +267,11 @@ s5fs_read_vnode(vnode_t *vnode)
 static void
 s5fs_delete_vnode(vnode_t *vnode)
 {
-	
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_delete_vnode");
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_delete_vnode");
+	VNODE_TO_S5INODE(vnode)->s5_linkcount--;
+	if (0 == VNODE_TO_S5INODE(vnode)->s5_linkcount) {
+		/*break_point();*/
+	}
 }
 
 /*
@@ -413,8 +416,10 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	
 	s5_link(dir, child, name, namelen);
 	
+	/* WHy shoudl I do this?
 	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
 	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
+	*/
 
 	/* KASSERT  inode refcount of the file should be 2
 	 * and the vnode refcount should be 1.*/
@@ -543,9 +548,10 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	s5_link(child,child, ".", 1);
 	s5_link(child, dir, "..", 2);
 	
-	vput(child);
+	VNODE_TO_S5INODE(child)->s5_linkcount = 2;
 	
-	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
+	/*
+	vput(child);*/
 	
 	return 0;
 }
@@ -630,7 +636,7 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 	 * S5_seek_to_block assumes the offset is the block number in its 
 	 * s5_direct_blocks or s5_indirect_block entries
 	 */
-		int blocknum = s5_seek_to_block(vnode, S5_DATA_BLOCK(offset), 1);
+		int blocknum = s5_seek_to_block(vnode, S5_DATA_BLOCK(offset), 0);
 		if (blocknum == 0) {
 		    NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage for sparse");
 			/*Fll with zeros*/
