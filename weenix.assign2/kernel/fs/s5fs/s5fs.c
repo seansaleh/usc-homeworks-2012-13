@@ -405,7 +405,7 @@ s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 static int
 s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_create");
 	vnode_t *child;
@@ -424,7 +424,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
 	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 
-	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 	return inode;
 }
 
@@ -440,7 +440,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t devid)
 {
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 /*Alloc an inode
 Link it into its directory
 vget to get the vnode from the alloced inode
@@ -468,7 +468,7 @@ vput just do it?
 	vput(child);
 	
 	NOT_YET_IMPLEMENTED("? S5FS: s5fs_mknod");
-	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 
 	return 0;
 }
@@ -481,16 +481,16 @@ vput just do it?
 int
 s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 {
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(base->vn_fs)->s5f_mutex);
 	
 	int ret = s5_find_dirent(base, name, namelen);
 	if (ret < 0) {
-		kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+		kmutex_unlock(&FS_TO_S5FS(base->vn_fs)->s5f_mutex);
 		return ret;
 	}
 	else {
 		*result = vget(base->vn_fs, ret);
-		kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+		kmutex_unlock(&FS_TO_S5FS(base->vn_fs)->s5f_mutex);
 		return 0;
 	}
 }
@@ -506,9 +506,9 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 {
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(src->vn_fs)->s5f_mutex);
 	int ret = s5_link(dir, src, name, namelen);
-	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(src->vn_fs)->s5f_mutex);
 	return ret;
 }
 
@@ -523,9 +523,9 @@ s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 {
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 	int ret = s5_remove_dirent(dir, name, namelen);
-	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 	return ret;
 }
 
@@ -553,7 +553,7 @@ s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 {
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 	/*Inspired by ramfs_mkdir.c*/
 	vnode_t *vn;
 	
@@ -575,7 +575,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
 	
-	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(dir->vn_fs)->s5f_mutex);
 	return 0;
 }
 
@@ -593,9 +593,9 @@ static int
 s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 {
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
-	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(parent->vn_fs)->s5f_mutex);
 	int ret = -1;
-	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(parent->vn_fs)->s5f_mutex);
 	return ret;
 }
 
