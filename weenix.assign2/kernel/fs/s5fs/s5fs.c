@@ -374,7 +374,10 @@ static int
 s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
     NOT_YET_IMPLEMENTED("S5FS: s5fs_write");
-	return s5_write_file(vnode, offset, buf, len);
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	int ret = s5_write_file(vnode, offset, buf, len);
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return ret;
 }
 
 /* This function is deceptivly simple, just return the vnode's
@@ -402,6 +405,8 @@ s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 static int
 s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_create");
 	vnode_t *child;
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &child));
@@ -419,7 +424,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
 	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 
-
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	return inode;
 }
 
@@ -435,6 +440,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t devid)
 {
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 /*Alloc an inode
 Link it into its directory
 vget to get the vnode from the alloced inode
@@ -461,8 +467,10 @@ vput just do it?
 	/*TODO is this wrong?*/
 	vput(child);
 	
-        NOT_YET_IMPLEMENTED("? S5FS: s5fs_mknod");
-        return 0;
+	NOT_YET_IMPLEMENTED("? S5FS: s5fs_mknod");
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+
+	return 0;
 }
 
 /*
@@ -473,14 +481,18 @@ vput just do it?
 int
 s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 {
-        NOT_YET_IMPLEMENTED("? S5FS: s5fs_lookup");
-		int ret = s5_find_dirent(base, name, namelen);
-		if (ret < 0)
-			return ret;
-		else {
-			*result = vget(base->vn_fs, ret);
-			return 0;
-		}
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	
+	int ret = s5_find_dirent(base, name, namelen);
+	if (ret < 0) {
+		kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+		return ret;
+	}
+	else {
+		*result = vget(base->vn_fs, ret);
+		kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+		return 0;
+	}
 }
 
 /*
@@ -494,7 +506,10 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 {
-	return s5_link(dir, src, name, namelen);  
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	int ret = s5_link(dir, src, name, namelen);
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return ret;
 }
 
 /*
@@ -508,8 +523,10 @@ s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 {
-    NOT_YET_IMPLEMENTED("S5FS: s5fs_unlink");
-	return s5_remove_dirent(dir, name, namelen);
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	int ret = s5_remove_dirent(dir, name, namelen);
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return ret;
 }
 
 /*
@@ -536,9 +553,9 @@ s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 {
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	/*Inspired by ramfs_mkdir.c*/
 	vnode_t *vn;
-/*	s5_dirent_t *dirent;*/
 	
 	/*Ensure this does not already exist*/
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &vn));
@@ -558,8 +575,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
 	
-	NOT_YET_IMPLEMENTED("? S5FS: s5fs_mkdir");
-	/*panic("The directory was never actually made!");*/
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	return 0;
 }
 
@@ -576,8 +592,11 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
-        return -1;
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	int ret = -1;
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return ret;
 }
 
 
@@ -592,6 +611,7 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 static int
 s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 {
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	s5_dirent_t s5_dir;
 	int ret = s5_read_file(vnode, offset, &s5_dir, sizeof(s5_dirent_t));
 	
@@ -599,6 +619,7 @@ s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 	strncpy(d->d_name, s5_dir.s5d_name, S5_NAME_LEN);
 	s5_dir.s5d_name[S5_NAME_LEN - 1] = '\0';
 	
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	return ret;	
 }
 
@@ -615,19 +636,18 @@ s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 static int
 s5fs_stat(vnode_t *vnode, struct stat *ss)
 {
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
-	/*memset(ss, 0, sizeof(struct stat*/
-	
-	/*Otherwise use macros*/
 	ss->st_mode		= vnode->vn_mode;
-	
 	ss->st_ino		= vnode->vn_vno;
 	ss->st_nlink	= inode->s5_linkcount - 1; /*-1 since ramfs does it!*/
 	ss->st_size		= inode->s5_size;
 	ss->st_blksize	= S5_BLOCK_SIZE;
 	ss->st_blocks	= (inode->s5_size / S5_BLOCK_SIZE) + 1;
-        NOT_YET_IMPLEMENTED("? S5FS: s5fs_stat");
-        return 0;
+
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return 0;
 }
 
 /*
@@ -642,6 +662,8 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+
 	/* If I get and offset not 0, it should be small. 
 	 * S5_seek_to_block assumes the offset is the block number in its 
 	 * s5_direct_blocks or s5_indirect_block entries
@@ -650,13 +672,14 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 		if (blocknum == 0) {
 		    NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage for sparse");
 			/*Fll with zeros*/
+			kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 			return 0;
 		}
 		else {
-			/*blockdev_t *bd = FS_TO_S5FS(vnode->vn_fs)->s5f_bdev;*/
 			blockdev_t *bd = VNODE_TO_S5FS(vnode)->s5f_bdev;
 			/*blocknum the block number to start reading at 
 			the last argument is not PAGE_SIZE but rather number of blocks?*/
+			kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 			return bd->bd_ops->read_block(bd, pagebuf, blocknum, 1);
 		}	
 }
@@ -679,8 +702,13 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 static int
 s5fs_dirtypage(vnode_t *vnode, off_t offset)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_dirtypage");
-        return -1;
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_dirtypage");
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	
+	int ret = -1;
+	
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return ret;
 }
 
 /*
@@ -689,8 +717,13 @@ s5fs_dirtypage(vnode_t *vnode, off_t offset)
 static int
 s5fs_cleanpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_cleanpage");
-        return -1;
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_cleanpage");
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	
+	int ret = -1;
+	
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	return ret;
 }
 
 /* Diagnostic/Utility: */
