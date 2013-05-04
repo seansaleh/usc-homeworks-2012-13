@@ -496,6 +496,8 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	
 	s5_dirent_t entry;
 	entry.s5d_inode = VNODE_TO_S5INODE(child)->s5_number;
+	if (entry.s5d_inode == 5)
+		break_point();
 	strncpy(&entry.s5d_name, name, MIN(namelen, S5_NAME_LEN - 1));
 	entry.s5d_name[MIN(namelen, S5_NAME_LEN - 1)] = '\0';
 	
