@@ -44,6 +44,24 @@
 static void s5_free_block(s5fs_t *fs, int block);
 static int s5_alloc_block(s5fs_t *);
 
+/*
+ * Locks the mutex for the whole file system
+ */
+static void
+lock_s5(s5fs_t *fs)
+{
+        kmutex_lock(&fs->s5f_mutex);
+}
+
+/*
+ * Unlocks the mutex for the whole file system
+ */
+static void
+unlock_s5(s5fs_t *fs)
+{
+        kmutex_unlock(&fs->s5f_mutex);
+}
+
 
 /*
  * Return the disk-block number for the given seek pointer (aka file
@@ -103,25 +121,6 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 	
 	pframe_unpin(pf);
 
-}
-
-
-/*
- * Locks the mutex for the whole file system
- */
-static void
-lock_s5(s5fs_t *fs)
-{
-        kmutex_lock(&fs->s5f_mutex);
-}
-
-/*
- * Unlocks the mutex for the whole file system
- */
-static void
-unlock_s5(s5fs_t *fs)
-{
-        kmutex_unlock(&fs->s5f_mutex);
 }
 
 
