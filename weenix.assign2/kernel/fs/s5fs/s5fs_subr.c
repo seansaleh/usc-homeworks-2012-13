@@ -68,7 +68,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 			then it is the thing in the indirect block*/
 	NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
 	
-	lock_s5(FS_TO_S5FS(vnode->vn_fs));
+	lock_s5(&FS_TO_S5FS(vnode->vn_fs));
 	
 	uint32_t ret; 
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
@@ -91,7 +91,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 		break_point();/*Sparse Block, what does i do?!?!?!?*/
 	}
 	
-	unlock_s5(FS_TO_S5FS(vnode->vn_fs));
+	unlock_s5(&FS_TO_S5FS(vnode->vn_fs));
 	return ret;
 	
 	pframe_t *pf;
