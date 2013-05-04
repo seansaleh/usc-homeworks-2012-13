@@ -197,6 +197,7 @@ int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {
 	NOT_YET_IMPLEMENTED("? S5FS: s5_read_file");
+	s5fs_t *s5fs = FS_TO_S5FS(vnode->vn_fs);
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	
@@ -205,6 +206,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	
 	uint32_t data_block_num = S5_DATA_BLOCK(seek);
 	
+	lock_s5(s5fs);
 	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
 
 	/* While we only support small files */
@@ -213,6 +215,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	int ret = MAX(0, MIN((off_t)len, inode->s5_size - seek));
 		
 	memcpy(dest, pf->pf_addr + S5_DATA_OFFSET(seek), ret);
+	unlock_s5(s5fs);
 	return ret;
 }
 
