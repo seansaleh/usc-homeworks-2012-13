@@ -65,9 +65,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
 	/*seekptr is a number such as 0,1,2,3,4,5,6,7,8,9,10,etc. It comes from S5_DATA_BLOCK(seek), 
 	so it refers to s5_inode.s5_direct_blocks[seekptr], unless it is indirect block... 
-			then it is the thing in the indirect block*/
-	NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
-	
+			then it is the thing in the indirect block*/	
 	uint32_t ret; 
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	
@@ -84,7 +82,6 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 		
 		ret = ((uint32_t *)(pf->pf_addr))[seekptr-S5_NDIRECT_BLOCKS];
 	}
-	
 	if (ret == 0) { /*Sparse Block*/
 		break_point();/*Sparse Block, what does i do?!?!?!?*/
 	}
@@ -196,7 +193,6 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {
-	NOT_YET_IMPLEMENTED("? S5FS: s5_read_file");
 	s5fs_t *s5fs = FS_TO_S5FS(vnode->vn_fs);
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
@@ -498,7 +494,6 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	/*Make sure this link doesn't exist */
 	KASSERT(0>=s5_find_dirent(parent, name, namelen));
 	
-	
 	s5_dirent_t entry;
 	entry.s5d_inode = VNODE_TO_S5INODE(child)->s5_number;
 	strncpy(&entry.s5d_name, name, MIN(namelen, S5_NAME_LEN - 1));
@@ -506,10 +501,6 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	
 	int written_amount = s5_write_file(parent, VNODE_TO_S5INODE(parent)->s5_size, &entry, sizeof(s5_dirent_t));
 	KASSERT(written_amount == sizeof(s5_dirent_t));
-	/*TODO*/
-	/*Adjust file size in vnode and inode, but do it in write instead?*/
-	/*parent->vn_len+=written_amount;
-	VNODE_TO_S5INODE(parent)->s5_size+=written_amount;*/
 	
 	VNODE_TO_S5INODE(parent)->s5_linkcount++;
 	
