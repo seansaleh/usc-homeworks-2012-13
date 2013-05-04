@@ -149,7 +149,7 @@ unlock_s5(s5fs_t *fs)
 int
 s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 {
-	s5fs_t *s5fs = FS_TO_S5FS(&vnode->vn_fs);
+	s5fs_t *s5fs = FS_TO_S5FS(vnode->vn_fs);
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	lock_s5(s5fs);
