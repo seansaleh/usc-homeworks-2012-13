@@ -44,24 +44,6 @@
 static void s5_free_block(s5fs_t *fs, int block);
 static int s5_alloc_block(s5fs_t *);
 
-/*
- * Locks the mutex for the whole file system
- */
-static void
-lock_s5(s5fs_t *fs)
-{
-        kmutex_lock(&fs->s5f_mutex);
-}
-
-/*
- * Unlocks the mutex for the whole file system
- */
-static void
-unlock_s5(s5fs_t *fs)
-{
-        kmutex_unlock(&fs->s5f_mutex);
-}
-
 
 /*
  * Return the disk-block number for the given seek pointer (aka file
@@ -86,8 +68,6 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 			then it is the thing in the indirect block*/
 	NOT_YET_IMPLEMENTED("S5FS ?: s5_seek_to_block");
 	
-	lock_s5(&FS_TO_S5FS(vnode->vn_fs));
-	
 	uint32_t ret; 
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	
@@ -109,7 +89,6 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 		break_point();/*Sparse Block, what does i do?!?!?!?*/
 	}
 	
-	unlock_s5(&FS_TO_S5FS(vnode->vn_fs));
 	return ret;
 	
 	pframe_t *pf;
@@ -121,6 +100,25 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 	
 	pframe_unpin(pf);
 
+}
+
+
+/*
+ * Locks the mutex for the whole file system
+ */
+static void
+lock_s5(s5fs_t *fs)
+{
+        kmutex_lock(&fs->s5f_mutex);
+}
+
+/*
+ * Unlocks the mutex for the whole file system
+ */
+static void
+unlock_s5(s5fs_t *fs)
+{
+        kmutex_unlock(&fs->s5f_mutex);
 }
 
 
@@ -151,16 +149,13 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 int
 s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 {
+	s5fs_t *s5fs = FS_TO_S5FS(fs);
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
-		
-	/*uint32_t pagenum = inode->s5_direct_blocks[S5_DATA_BLOCK(seek)];
-	pframe_get(&vnode->vn_mmobj, pagenum, &pf);*/
+	lock_s5(s5fs);
 	
 	uint32_t data_block_num = S5_DATA_BLOCK(seek);
-	
 	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
-
 	
 	/*KASSERT not writing past  the end of a block, not supported yet*/
 	KASSERT(len+S5_DATA_OFFSET(seek)<S5_BLOCK_SIZE);
@@ -173,8 +168,9 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	vnode->vn_len+=len;
 	VNODE_TO_S5INODE(vnode)->s5_size+=len;
 	
-        NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
-        return len;
+	NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
+	unlock_s5(s5fs);
+	return len;
 }
 
 /*
