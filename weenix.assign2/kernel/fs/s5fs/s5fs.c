@@ -543,9 +543,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	s5_link(child,child, ".", 1);
 	s5_link(child, dir, "..", 2);
 	
-	/*Dirty inde*/
-	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
-	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
+	vput(child);
 	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
 	
@@ -565,6 +563,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 {
+	int inode = s5_find_dirent(parent, name, namelen);
         NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
         return -1;
 }
