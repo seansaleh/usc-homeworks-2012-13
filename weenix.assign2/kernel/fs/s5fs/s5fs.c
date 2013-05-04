@@ -214,7 +214,8 @@ s5fs_read_vnode(vnode_t *vnode)
 	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
 	
 	/*Don't forget to pin the pf.*/
-	pframe_pin(pf);
+	/*While delete is not done*/
+	/*pframe_pin(pf);*/
 	
 	s5_inode_t *inode = (s5_inode_t *)(pf->pf_addr) + S5_INODE_OFFSET(vnode->vn_vno);
 	
@@ -266,6 +267,7 @@ s5fs_read_vnode(vnode_t *vnode)
 static void
 s5fs_delete_vnode(vnode_t *vnode)
 {
+	
         NOT_YET_IMPLEMENTED("S5FS: s5fs_delete_vnode");
 }
 
