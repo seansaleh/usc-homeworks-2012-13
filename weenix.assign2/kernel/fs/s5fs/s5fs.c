@@ -547,7 +547,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 1;
-	
+	vput (child);
 	return 0;
 }
 
