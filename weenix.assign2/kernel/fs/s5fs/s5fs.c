@@ -363,9 +363,9 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-	kmutex_lock(FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_lock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	int ret = s5_read_file(vnode, offset, buf, len);
-	kmutex_unlock(FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
+	kmutex_unlock(&FS_TO_S5FS(vnode->vn_fs)->s5f_mutex);
 	return ret;
 }
 
