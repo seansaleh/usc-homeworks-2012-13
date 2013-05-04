@@ -221,7 +221,7 @@ s5fs_read_vnode(vnode_t *vnode)
 	
 	vnode->vn_i = inode;
 	vnode->vn_len = inode->s5_size;
-	
+		
 	/*When this function returns, the inode link count should be incremented.*/
 	inode->s5_linkcount++;
 	
@@ -269,8 +269,11 @@ s5fs_delete_vnode(vnode_t *vnode)
 {
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_delete_vnode");
 	VNODE_TO_S5INODE(vnode)->s5_linkcount--;
-	if (0 == VNODE_TO_S5INODE(vnode)->s5_linkcount) {
-		/*break_point();*/
+	if (0 >= VNODE_TO_S5INODE(vnode)->s5_linkcount) {
+		pframe_t *pf;
+		KASSERT(!(pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf)<0));
+		pframe_unpin(pf);
+		s5_free_inode(vnode);
 	}
 }
 
@@ -284,8 +287,7 @@ s5fs_delete_vnode(vnode_t *vnode)
 static int
 s5fs_query_vnode(vnode_t *vnode)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_query_vnode");
-        return 0;
+	return VNODE_TO_S5INODE(vnode)->s5_linkcount > 1;
 }
 
 /*
@@ -550,8 +552,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 2;
 	
-	/*
-	vput(child);*/
+	vput(child);
 	
 	return 0;
 }
@@ -640,6 +641,7 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 		if (blocknum == 0) {
 		    NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage for sparse");
 			/*Fll with zeros*/
+			memset(pagebuf, 0, S5_BLOCK_SIZE);
 			return 0;
 		}
 		else {
