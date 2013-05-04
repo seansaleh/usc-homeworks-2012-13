@@ -363,9 +363,10 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-	NOT_YET_IMPLEMENTED("? S5FS: s5fs_read");
-	return s5_read_file(vnode, offset, buf, len);
-    return -1;
+	lock_s5(vnode->vn_fs);
+	int ret = s5_read_file(vnode, offset, buf, len);
+	unlock_s5(vnode->vn_fs);
+	return ret;
 }
 
 /* Simply call s5_write_file. */
@@ -409,16 +410,15 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	child = vget(dir->vn_fs, inode);
 	
 	s5_link(dir, child, name, namelen);
-	
-	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
-	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 
 	/* KASSERT  inode refcount of the file should be 2
 	 * and the vnode refcount should be 1.*/
 	KASSERT(child->vn_refcount == 1);
+	VNODE_TO_S5INODE(child)->s5_linkcount=2;
+	
+	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
+	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 
-	if (VNODE_TO_S5INODE(child)->s5_linkcount == 2)
-		break_point(); /*TODO: This should not be true, but don't know why, just comments say so, so i'm just gonna breakpoint it and ignore it for now*/
 
 	return inode;
 }
@@ -494,7 +494,6 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 {
-	NOT_YET_IMPLEMENTED("S5FS: s5fs_link");
 	return s5_link(dir, src, name, namelen);  
 }
 
