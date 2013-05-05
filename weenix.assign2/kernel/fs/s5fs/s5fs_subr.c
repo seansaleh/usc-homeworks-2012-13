@@ -162,8 +162,8 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	
 	memcpy(pf->pf_addr + S5_DATA_OFFSET(seek), bytes, len);
 	
-	vnode->vn_len+=len;
-	VNODE_TO_S5INODE(vnode)->s5_size+=len;
+	vnode->vn_len=MAX(VNODE_TO_S5INODE(vnode)->s5_size, seek + len);
+	VNODE_TO_S5INODE(vnode)->s5_size= MAX(VNODE_TO_S5INODE(vnode)->s5_size, seek + len);
 	
 	NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
 	unlock_s5(s5fs);
@@ -481,6 +481,7 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 			s5_write_file(vnode, offset, &dirent, sizeof(s5_dirent_t));
 			
 			VNODE_TO_S5INODE(vn_child)->s5_linkcount--;
+			vnode->vn_len-=sizeof(s5_dirent_t);
 			VNODE_TO_S5INODE(vnode)->s5_size-= sizeof(s5_dirent_t);
 			
 			s5_dirty_inode(FS_TO_S5FS(vnode->vn_fs), VNODE_TO_S5INODE(vnode));
