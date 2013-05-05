@@ -73,7 +73,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 		ret = inode->s5_direct_blocks[seekptr];
 	}
 	else { /*Indirect block*/
-		break_point();
+		/*break_point();*/
 		pframe_t *pf;
 		pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), inode->s5_indirect_block, &pf);
 		
