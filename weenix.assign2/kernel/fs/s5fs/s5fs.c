@@ -430,6 +430,8 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	KASSERT(child->vn_refcount == 1);
 	VNODE_TO_S5INODE(child)->s5_linkcount = 2;
 
+	*result = child;
+	
 	return inode;
 }
 
