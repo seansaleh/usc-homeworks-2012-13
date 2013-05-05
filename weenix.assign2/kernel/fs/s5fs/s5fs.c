@@ -639,7 +639,7 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	ss->st_mode		= vnode->vn_mode;
 	ss->st_ino		= vnode->vn_vno;
-	ss->st_nlink	= inode->s5_linkcount - 1; /*-1 since ramfs does it!*/ 
+	ss->st_nlink	= inode->s5_linkcount;
 	ss->st_size		= inode->s5_size;
 	ss->st_blksize	= S5_BLOCK_SIZE;
 	ss->st_blocks	= (inode->s5_size / S5_BLOCK_SIZE) + 1;
