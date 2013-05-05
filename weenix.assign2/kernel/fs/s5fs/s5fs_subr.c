@@ -438,7 +438,7 @@ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 	off_t offset = 0;
 	while (0 != s5_read_file(vnode, offset, &d, sizeof(s5_dirent_t))) {
 		offset += sizeof(s5_dirent_t);
-		dbg_print("Directory Name: %s \n",d.s5d_name);
+		/*dbg_print("Directory Name: %s \n",d.s5d_name);*/
 		if (name_match(d.s5d_name, name, namelen))
 			return d.s5d_inode;
 	}
@@ -468,8 +468,27 @@ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 int
 s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_remove_dirent");
-        return -1;
+	s5_dirent_t dirent;
+	off_t offset = 0;
+	while (0 != s5_read_file(vnode, offset, &dirent, sizeof(s5_dirent_t))) {
+		if (name_match(dirent.s5d_name, name, namelen)) {
+			vnode_t * vn_child = vget(vnode->vn_fs, dirent.s5d_inode);
+			
+			/*move the directory entry*/
+			/*Read the last directory entry into dirent*/
+			s5_read_file(vnode, VNODE_TO_S5INODE(vnode)->s5_size-sizeof(s5_dirent_t), &dirent, sizeof(s5_dirent_t));
+			/*Write that dirent into the old dirent's spot (at offset)*/
+			s5_write_file(vnode, offset, &dirent, sizeof(s5_dirent_t));
+			
+			VNODE_TO_S5INODE(vn_child)->s5_linkcount--;
+			VNODE_TO_S5INODE(vnode)->s5_size-= sizeof(s5_dirent_t);
+	
+			vput(vn_child);
+			return 0;
+		}
+		offset += sizeof(s5_dirent_t);
+	} /*else it doesn't exist*/
+	return -ENOENT;
 }
 
 /*

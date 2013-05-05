@@ -574,9 +574,31 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 {
+/*Check if size is greater than dirent_t
+also make sure to decrement parent's linkcount
+remove dirent on the named item from find_dirent * 2*/
+	NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
 	int inode = s5_find_dirent(parent, name, namelen);
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
-        return -1;
+	if (inode<0) {
+		return inode;
+	}
+	
+	vnode_t * vn = vget(parent->vn_fs, inode);
+	
+	if (VNODE_TO_S5INODE(vn)->s5_type != S5_TYPE_DIR) {
+		vput(vn);
+		return -ENOTDIR;
+	}
+	
+	if (VNODE_TO_S5INODE(vn)->s5_size > (2 * sizeof(s5_dirent_t))) {
+		vput(vn);
+		return -ENOTEMPTY;
+	}
+	
+	vput(vn);
+	KASSERT (s5_remove_dirent(parent, name, namelen)>=0);
+	
+	return 0;
 }
 
 
