@@ -477,6 +477,11 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 		if (name_match(dirent.s5d_name, name, namelen)) {
 			vnode_t * vn_child = vget(vnode->vn_fs, dirent.s5d_inode);
 			
+			if (VNODE_TO_S5INODE(vn_child)->s5_type != S5_TYPE_DATA) {
+				vput(vn_child);
+				return -EISDIR;
+			}
+			
 			/*move the directory entry*/
 			/*Read the last directory entry into dirent*/
 			s5_read_file(vnode, VNODE_TO_S5INODE(vnode)->s5_size-sizeof(s5_dirent_t), &dirent, sizeof(s5_dirent_t));
