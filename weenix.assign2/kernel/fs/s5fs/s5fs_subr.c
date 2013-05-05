@@ -483,7 +483,7 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 			VNODE_TO_S5INODE(vn_child)->s5_linkcount--;
 			VNODE_TO_S5INODE(vnode)->s5_size-= sizeof(s5_dirent_t);
 			
-			s5_dirty_inode(vnode->vn_fs, VNODE_TO_S5INODE(vnode));
+			s5_dirty_inode(FS_TO_S5FS(vnode->vn_fs), VNODE_TO_S5INODE(vnode));
 			vput(vn_child);
 			return 0;
 		}
