@@ -427,7 +427,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	/* KASSERT  inode refcount of the file should be 2
 	 * and the vnode refcount should be 1.*/
 	KASSERT(child->vn_refcount == 1);
-	VNODE_TO_S5INODE(child)->s5_linkcount = 2;
+	VNODE_TO_S5INODE(child)->s5_linkcount = 2; 
 
 	*result = child;
 	
@@ -553,7 +553,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	s5_link(child,child, ".", 1);
 	s5_link(child, dir, "..", 2);
 	
-	VNODE_TO_S5INODE(child)->s5_linkcount = 2;
+	VNODE_TO_S5INODE(child)->s5_linkcount = 2; /**/
 	
 	vput(child);
 	
@@ -638,7 +638,7 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 	ss->st_mode		= vnode->vn_mode;
 	ss->st_ino		= vnode->vn_vno;
-	ss->st_nlink	= inode->s5_linkcount - 1; /*-1 since ramfs does it!*/
+	ss->st_nlink	= inode->s5_linkcount - 1; /*-1 since ramfs does it!*/ 
 	ss->st_size		= inode->s5_size;
 	ss->st_blksize	= S5_BLOCK_SIZE;
 	ss->st_blocks	= (inode->s5_size / S5_BLOCK_SIZE) + 1;

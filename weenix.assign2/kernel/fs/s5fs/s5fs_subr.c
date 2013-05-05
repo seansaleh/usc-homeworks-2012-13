@@ -526,7 +526,7 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	int written_amount = s5_write_file(parent, VNODE_TO_S5INODE(parent)->s5_size, &entry, sizeof(s5_dirent_t));
 	KASSERT(written_amount == sizeof(s5_dirent_t));
 	
-	VNODE_TO_S5INODE(parent)->s5_linkcount++;
+	VNODE_TO_S5INODE(child)->s5_linkcount++;
 	
 	/*Don't dirty yet*/
 	/*s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));*/
