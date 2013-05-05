@@ -149,7 +149,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	s5fs_t *s5fs = FS_TO_S5FS(vnode->vn_fs);
 	pframe_t *pf;
 	s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
-	lock_s5(s5fs);
+	/*lock_s5(s5fs);*/
 	
 	uint32_t data_block_num = S5_DATA_BLOCK(seek);
 	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
@@ -166,7 +166,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	VNODE_TO_S5INODE(vnode)->s5_size+=len;
 	
 	NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
-	unlock_s5(s5fs);
+	/*unlock_s5(s5fs);*/
 	return len;
 }
 
@@ -202,7 +202,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	
 	uint32_t data_block_num = S5_DATA_BLOCK(seek);
 	
-	lock_s5(s5fs);
+	/*lock_s5(s5fs);*/
 	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
 
 	/* While we only support small files */
@@ -211,7 +211,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 	int ret = MAX(0, MIN((off_t)len, inode->s5_size - seek));
 		
 	memcpy(dest, pf->pf_addr + S5_DATA_OFFSET(seek), ret);
-	unlock_s5(s5fs);
+	/*unlock_s5(s5fs);*/
 	return ret;
 }
 
@@ -254,8 +254,7 @@ s5_free_block(s5fs_t *fs, int blockno)
 {
         s5_super_t *s = fs->s5f_super;
 
-
-        lock_s5(fs);
+		lock_s5(fs);
 
         KASSERT(S5_NBLKS_PER_FNODE > s->s5s_nfree);
 
@@ -505,7 +504,7 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	VNODE_TO_S5INODE(parent)->s5_linkcount++;
 	
 	/*Don't dirty yet*/
-	/*s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));*/
+	s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));
 	NOT_YET_IMPLEMENTED("? S5FS: s5_link");
 	return 0;
 }

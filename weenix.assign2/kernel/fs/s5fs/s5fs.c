@@ -215,7 +215,7 @@ s5fs_read_vnode(vnode_t *vnode)
 	
 	/*Don't forget to pin the pf.*/
 	/*While delete is not done*/
-	/*pframe_pin(pf);*/
+	pframe_pin(pf);
 	
 	s5_inode_t *inode = (s5_inode_t *)(pf->pf_addr) + S5_INODE_OFFSET(vnode->vn_vno);
 	
@@ -268,8 +268,10 @@ static void
 s5fs_delete_vnode(vnode_t *vnode)
 {
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_delete_vnode");
+	return;
 	VNODE_TO_S5INODE(vnode)->s5_linkcount--;
 	if (0 >= VNODE_TO_S5INODE(vnode)->s5_linkcount) {
+		break_point();
 		pframe_t *pf;
 		KASSERT(!(pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf)<0));
 		pframe_unpin(pf);
@@ -551,6 +553,9 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 	s5_link(child, dir, "..", 2);
 	
 	VNODE_TO_S5INODE(child)->s5_linkcount = 2;
+	
+	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
+	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 	
 	vput(child);
 	
