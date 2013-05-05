@@ -410,7 +410,6 @@ s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 static int
 s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
-	break_point();
 	NOT_YET_IMPLEMENTED("? S5FS: s5fs_create");
 	vnode_t *child;
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &child));

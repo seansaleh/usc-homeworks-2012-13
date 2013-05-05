@@ -78,7 +78,9 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 		pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), inode->s5_indirect_block, &pf);
 		
 		/*Make sure we don't try to get more blocks than is possible*/
-		KASSERT(seekptr-S5_NDIRECT_BLOCKS < S5_NDIRECT_BLOCKS);
+		if(seekptr-S5_NDIRECT_BLOCKS >= S5_NDIRECT_BLOCKS) {
+			return -ENOSPC;
+		}
 		
 		ret = ((uint32_t *)(pf->pf_addr))[seekptr-S5_NDIRECT_BLOCKS];
 	}
