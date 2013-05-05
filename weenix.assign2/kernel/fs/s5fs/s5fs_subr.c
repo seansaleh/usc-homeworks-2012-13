@@ -523,6 +523,11 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	/*Make sure this link doesn't exist */
 	KASSERT(0>=s5_find_dirent(parent, name, namelen));
 	
+	
+	if (VNODE_TO_S5INODE(child)->s5_type == S5_TYPE_DIR) {
+		return -EISDIR;
+	}
+	
 	s5_dirent_t entry;
 	entry.s5d_inode = VNODE_TO_S5INODE(child)->s5_number;
 	strncpy(&entry.s5d_name, name, MIN(namelen, S5_NAME_LEN - 1));
