@@ -268,9 +268,10 @@ static void
 s5fs_delete_vnode(vnode_t *vnode)
 {
 	NOT_YET_IMPLEMENTED("S5FS: s5fs_delete_vnode");
+	VNODE_TO_S5INODE(vnode)->s5_linkcount--;
+
 	return;
 	/*This breaks everything*/
-	VNODE_TO_S5INODE(vnode)->s5_linkcount--;
 	if (0 >= VNODE_TO_S5INODE(vnode)->s5_linkcount) {
 		pframe_t *pf;
 		KASSERT(!(pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf)<0));
