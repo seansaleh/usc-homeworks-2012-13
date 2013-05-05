@@ -86,20 +86,10 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 		ret = ((uint32_t *)(pf->pf_addr))[seekptr-S5_NDIRECT_BLOCKS];
 	}
 	if (ret == 0) { /*Sparse Block*/
-		/*break_point();*//*Sparse Block, what does i do?!?!?!?*/
+		/*break_point();*/
 	}
 	
 	return ret;
-	
-	pframe_t *pf;
-	pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf);
-	pframe_pin(pf);
-	
-	/*If used?*/
-	pframe_dirty(pf);
-	
-	pframe_unpin(pf);
-
 }
 
 
@@ -159,16 +149,12 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	
 	/*KASSERT not writing past  the end of a block, not supported yet*/
 	KASSERT(len+S5_DATA_OFFSET(seek)<=S5_BLOCK_SIZE);
-
-	/*This is if we don't have neough space to write and only write partial, not done yet*/
-/*int ret = MAX(0, MIN((off_t)len, inode->s5_size + S5_DATA_OFFSET(seek)));*/
 	
 	memcpy(pf->pf_addr + S5_DATA_OFFSET(seek), bytes, len);
 	
 	vnode->vn_len=MAX(VNODE_TO_S5INODE(vnode)->s5_size, seek + len);
 	VNODE_TO_S5INODE(vnode)->s5_size= MAX(VNODE_TO_S5INODE(vnode)->s5_size, seek + len);
 	
-	NOT_YET_IMPLEMENTED("? S5FS: s5_write_file");
 	unlock_s5(s5fs);
 	return len;
 }
@@ -522,7 +508,7 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 {
 	/*Make sure this link doesn't exist */
 	KASSERT(0>=s5_find_dirent(parent, name, namelen));
-	/*
+	/* THIS BREAKS EVERYTHING!!!!
 	if (VNODE_TO_S5INODE(child)->s5_type == S5_TYPE_DIR) {
 		return -EISDIR;
 	}*/
@@ -539,7 +525,6 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 	
 	/*Don't dirty yet*/
 	/*s5_dirty_inode(FS_TO_S5FS(parent->vn_fs), VNODE_TO_S5INODE(parent));*/
-	NOT_YET_IMPLEMENTED("? S5FS: s5_link");
 	return 0;
 }
 

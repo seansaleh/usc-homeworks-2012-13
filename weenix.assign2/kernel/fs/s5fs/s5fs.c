@@ -229,7 +229,7 @@ s5fs_read_vnode(vnode_t *vnode)
 		case S5_TYPE_FREE:
 			vnode->vn_ops = NULL;
 			/*vnode->vn_mode*/
-			panic("Is vnode what its supposed to be?  For S5_TYPE_FREE (Not properly implemented yet)");
+			panic("Should not try to read a free vnode");
 			break;
 		case S5_TYPE_DATA:
 			vnode->vn_ops = &s5fs_file_vops;
@@ -271,7 +271,7 @@ s5fs_delete_vnode(vnode_t *vnode)
 	VNODE_TO_S5INODE(vnode)->s5_linkcount--;
 
 	return;
-	/*This breaks everything*/
+	/*This breaks EVERYTHING*/
 	if (0 >= VNODE_TO_S5INODE(vnode)->s5_linkcount) {
 		pframe_t *pf;
 		KASSERT(!(pframe_get(S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode)), S5_INODE_BLOCK(vnode->vn_vno), &pf)<0));
@@ -373,16 +373,13 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-	NOT_YET_IMPLEMENTED("? S5FS: s5fs_read");
 	return s5_read_file(vnode, offset, buf, len);
-    return -1;
 }
 
 /* Simply call s5_write_file. */
 static int
 s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
-    NOT_YET_IMPLEMENTED("S5FS: s5fs_write");
 	return s5_write_file(vnode, offset, buf, len);
 }
 
@@ -411,7 +408,6 @@ s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 static int
 s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
-	NOT_YET_IMPLEMENTED("? S5FS: s5fs_create");
 	vnode_t *child;
 	KASSERT(0 != s5fs_lookup(dir, name, namelen, &child));
 	
@@ -420,7 +416,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 	
 	s5_link(dir, child, name, namelen);
 	
-	/* WHy shoudl I do this?
+	/* When does it matter if the inode is dirty?
 	s5_dirty_inode(FS_TO_S5FS(dir->vn_fs), VNODE_TO_S5INODE(dir));
 	s5_dirty_inode(FS_TO_S5FS(child->vn_fs), VNODE_TO_S5INODE(child));
 	*/
@@ -577,7 +573,6 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 /*Check if size is greater than dirent_t
 also make sure to decrement parent's linkcount
 remove dirent on the named item from find_dirent * 2*/
-	NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
 	int inode = s5_find_dirent(parent, name, namelen);
 	if (inode<0) {
 		return inode;

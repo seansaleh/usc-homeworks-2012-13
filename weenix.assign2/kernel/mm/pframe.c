@@ -263,7 +263,6 @@ pframe_alloc(mmobj_t *o, uint32_t pagenum)
 static int
 pframe_fill(pframe_t *pf)
 {
-	NOT_YET_IMPLEMENTED("pframe_fill? according to slides....");
         int ret;
 
         pframe_set_busy(pf);
