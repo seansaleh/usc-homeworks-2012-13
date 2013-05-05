@@ -155,7 +155,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 	pframe_get(&vnode->vn_mmobj, data_block_num, &pf);
 	
 	/*KASSERT not writing past  the end of a block, not supported yet*/
-	KASSERT(len+S5_DATA_OFFSET(seek)<S5_BLOCK_SIZE);
+	KASSERT(len+S5_DATA_OFFSET(seek)<=S5_BLOCK_SIZE);
 
 	/*This is if we don't have neough space to write and only write partial, not done yet*/
 /*int ret = MAX(0, MIN((off_t)len, inode->s5_size + S5_DATA_OFFSET(seek)));*/

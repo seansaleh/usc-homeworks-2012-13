@@ -621,6 +621,7 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 	ss->st_size		= inode->s5_size;
 	ss->st_blksize	= S5_BLOCK_SIZE;
 	ss->st_blocks	= (inode->s5_size / S5_BLOCK_SIZE) + 1;
+	if (inode->s5_indirect_block) ss->st_blocks++;
 	
 	return 0;
 }
